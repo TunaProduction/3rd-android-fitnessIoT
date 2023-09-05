@@ -8,16 +8,18 @@ import Versions.composeCompilerVersion
 import Versions.coroutinesVersion
 import Versions.espressoVersion
 import Versions.extJUnitVersion
+import Versions.hiltAndroidGradlePluginVersion
 import Versions.hiltLifeCycleViewModelVersion
 import Versions.hiltNavigationComposeVersion
 import Versions.hiltVersion
 import Versions.jUnitVersion
 import Versions.kotlinVersion
 import Versions.materialVersion
+import Versions.navigationVersion
 
 object Versions{
     const val androidxCompose = "1.1.0-rc01"
-    const val composeCompilerVersion = "1.1.0-rc02"
+    const val composeCompilerVersion = "1.4.6"
     //const val androidxCompose = "1.1.0-beta01"
     const val androidxLifecycle = "2.6.1"
     const val composeActivity = "1.7.0"
@@ -25,23 +27,25 @@ object Versions{
     const val extJUnitVersion = "1.1.5"
     const val espressoVersion = "3.5.1"
     const val androidxCoreVersion = "1.9.0"
-    const val hiltVersion = "2.38.1"
-    const val hiltNavigationComposeVersion = "1.0.0"
+    const val hiltVersion = "2.45"
+    const val hiltNavigationComposeVersion = "1.0.0-beta01"
     const val hiltLifeCycleViewModelVersion = "1.0.0-alpha03"
     const val composeCoilVersion = "2.1.0"
     const val materialVersion = "1.0.0-alpha14"
     //const val kotlinVersion = "1.5.31"
-    const val kotlinVersion = "1.6.10"
-    const val androidBuildToolsVersion = "7.2.1"
+    const val kotlinVersion = "1.8.10"
+    const val androidBuildToolsVersion = "7.0.4"
     const val coroutinesVersion = "1.6.0"
-    const val appCompatVersion = "1.4.0"
+    const val appCompatVersion = "1.6.1"
     const val composeBomVersion = "2023.03.00"
+    const val navigationVersion = "2.5.3"
+    const val hiltAndroidGradlePluginVersion = "2.38.1"
 }
 
 object Compose{
     const val compose = "androidx.compose.ui:ui"
     const val composeUiGraphics = "androidx.compose.ui:ui-graphics"
-    // const val material = "androidx.compose.material:material:$androidxCompose"
+    const val navigation = "androidx.navigation:navigation-compose:$navigationVersion"
     const val preview = "androidx.compose.ui:ui-tooling-preview"
     const val runtime = "androidx.compose.runtime:runtime:$androidxCompose"
     const val compiler = "androidx.compose.compiler:compiler:$composeCompilerVersion"
@@ -51,11 +55,9 @@ object Compose{
 }
 
 object Hilt{
-    const val hiltPlugin = "com.google.dagger:hilt-android-gradle-plugin:$hiltVersion"
-    const val hiltImplementation = "com.google.dagger:hilt-android:$hiltVersion"
-    const val hiltKapt = "com.google.dagger:hilt-android-compiler:$hiltVersion"
-    const val hiltNavigationCompose = "androidx.hilt:hilt-navigation-compose:$hiltNavigationComposeVersion"
-    const val hiltLifeCycleViewModel = "androidx.hilt:hilt-lifecycle-viewmodel:$hiltLifeCycleViewModelVersion"
+    const val hiltAndroid = "com.google.dagger:hilt-android:$hiltVersion"
+    const val hiltCompiler = "com.google.dagger:hilt-android-compiler:$hiltVersion"
+    const val hiltNavigation = "androidx.hilt:hilt-navigation-compose:$hiltNavigationComposeVersion"
 }
 
 object KotlinDependencies{
@@ -93,4 +95,5 @@ object Coroutines {
 object Build {
     const val androidBuildTools = "com.android.tools.build:gradle:$androidBuildToolsVersion"
     const val kotlinGradlePlugin = "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+    const val hiltAndroidGradlePlugin = "com.google.dagger:hilt-android-gradle-plugin:$hiltAndroidGradlePluginVersion"
 }
