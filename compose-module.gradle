@@ -30,8 +30,8 @@ android {
     compileOptions {
         coreLibraryDesugaringEnabled true
 
-        sourceCompatibility JavaVersion.VERSION_18
-        targetCompatibility JavaVersion.VERSION_18
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
         jvmTarget = '17'
@@ -39,6 +39,27 @@ android {
 }
 
 dependencies {
+
+    debugImplementation Debug.composeToolingUI
+    debugImplementation Debug.composeUIManifestTest
+    implementation platform(Compose.composeBom)
+    implementation Compose.compose
+    implementation Material.material
+    implementation Compose.preview
+    implementation Compose.compiler
+    implementation Coil.coil
+
+    implementation Hilt.hiltNavigation
+    implementation Compose.composeActivity
+
+    kapt Hilt.hiltCompiler
+    implementation Hilt.hiltAndroid
+
+    testImplementation Testing.jUnit
+    androidTestImplementation Testing.extJUnit
+    androidTestImplementation Testing.espresso
+    androidTestImplementation Testing.composeJUnit
+   /* implementation Compose.compose
     implementation Compose.compiler
     implementation Compose.composeUiGraphics
     implementation Compose.preview
@@ -52,7 +73,7 @@ dependencies {
     kapt Hilt.hiltCompiler
     implementation Hilt.hiltAndroid
 
-    testImplementation Testing.jUnit
+    testImplementation Testing.jUnit*/
     /*testImplementation Testing.junitAndroidExt
     testImplementation Testing.truth 
     testImplementation Testing.coroutines 
@@ -61,7 +82,7 @@ dependencies {
     testImplementation Testing.mockk
     testImplementation Testing.mockWebServer */
 
-    androidTestImplementation Testing.jUnit
+    //androidTestImplementation Testing.jUnit
     /*androidTestImplementation Testing.junitAndroidExt
     androidTestImplementation Testing.truth 
     androidTestImplementation Testing.coroutines 
