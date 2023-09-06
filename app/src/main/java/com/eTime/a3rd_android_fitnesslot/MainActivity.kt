@@ -1,5 +1,7 @@
 package com.eTime.a3rd_android_fitnesslot
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,8 +16,25 @@ import com.eTime.a3rd_android_fitnesslot.navigation.ThirdTimeNavigation
 import com.eTime.a3rd_android_fitnesslot.ui.theme._3rdandroidfitnessloTTheme
 
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val API_LOGGER_TAG = "API LOGGER"
+        private const val PERMISSION_REQUEST_CODE = 1
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT), PERMISSION_REQUEST_CODE)
+            } else {
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_CODE)
+            }
+        } else {
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), PERMISSION_REQUEST_CODE)
+        }
+
         setContent {
             _3rdandroidfitnessloTTheme {
                 // A surface container using the 'background' color from the theme
