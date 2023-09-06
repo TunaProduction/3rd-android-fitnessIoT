@@ -83,6 +83,7 @@ dependencies {
     //debugImplementation("androidx.compose.ui:ui-tooling")
 
     //MY MODULES
+    implementation(project(Modules.coreUi))
     implementation(project(Modules.featureLoginPresentation))
 
 }
