@@ -8,6 +8,10 @@ apply(from = "$rootDir/compose-module.gradle")
 android {
     namespace = "com.etime.auth_presentation"
 }
+
+dependencies {
+    implementation(project(Modules.coreUi))
+}
 /*plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")

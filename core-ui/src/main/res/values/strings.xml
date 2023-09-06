@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">3rd Time</string>
+
+    <string name="auth_login_title">Log in to your Account</string>
+</resources>
