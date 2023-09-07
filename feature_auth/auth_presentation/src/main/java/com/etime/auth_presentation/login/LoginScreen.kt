@@ -17,7 +17,9 @@ import androidx.compose.ui.unit.dp
 import com.etime.core_ui.components.TTButton
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(
+    onNextClick: () -> Unit,
+) {
     var email by remember {
         mutableStateOf("")
     }
@@ -59,7 +61,7 @@ fun LoginScreen() {
         TTButton(
             text = "Sign in"
         ){
-            Log.d("holi", "crayoli")
+            onNextClick()
         }
     }
 }

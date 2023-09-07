@@ -40,6 +40,9 @@ object Versions{
     const val composeBomVersion = "2023.03.00"
     const val navigationVersion = "2.5.3"
     const val hiltAndroidGradlePluginVersion = "2.38.1"
+    const val polarSdkVersion = "5.1.0"
+    const val rxJavaVersion = "3.1.6"
+    const val rxJavaAndroid = "3.0.2"
 }
 
 object Compose{
@@ -90,6 +93,15 @@ object Material{
 
 object Coroutines {
     const val coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
+}
+
+object Polar {
+    const val sdk = "com.github.polarofficial:polar-ble-sdk:${Versions.polarSdkVersion}"
+}
+
+object RxJava{
+    const val java = "io.reactivex.rxjava3:rxjava:${Versions.rxJavaVersion}"
+    const val android = "io.reactivex.rxjava3:rxandroid:${Versions.rxJavaAndroid}"
 }
 
 object Build {

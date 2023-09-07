@@ -69,6 +69,11 @@ dependencies {
     androidTestImplementation(Testing.composeJUnit)
     debugImplementation(Debug.composeToolingUI)
     debugImplementation(Debug.composeUIManifestTest)
+
+    //POLAR TOOLS
+    implementation(Polar.sdk)
+    implementation(RxJava.java)
+    implementation(RxJava.android)
     //implementation("androidx.core:core-ktx:1.9.0")
     //implementation("androidx.activity:activity-compose:1.7.0")
     //implementation("androidx.compose.ui:ui")
@@ -85,5 +90,6 @@ dependencies {
     //MY MODULES
     implementation(project(Modules.coreUi))
     implementation(project(Modules.featureLoginPresentation))
+    implementation(project(Modules.featureTrainingPresentation))
 
 }

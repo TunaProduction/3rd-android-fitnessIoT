@@ -10,6 +10,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven("https://jitpack.io")
     }
 }
 
@@ -21,3 +22,5 @@ include(":feature_auth:auth_presentation")
 include(":feature_auth:auth_domain")
 include(":feature_auth:auth_data")
 include(":core-ui")
+include(":feature_training")
+include(":feature_training:training_presentation")
