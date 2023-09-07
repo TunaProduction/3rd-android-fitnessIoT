@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.etime.auth_presentation.login.LoginScreen
+import com.etime.training_presentation.TrainingScreen
 
 @Composable
 fun ThirdTimeNavigation() {
@@ -15,7 +16,15 @@ fun ThirdTimeNavigation() {
         startDestination = Route.LOGIN
     ) {
         composable(Route.LOGIN) {
-            LoginScreen()
+            LoginScreen(
+                onNextClick = {
+                    navController.navigate(Route.TRAINING)
+                }
+            )
+        }
+
+        composable(Route.TRAINING){
+            TrainingScreen()
         }
     }
 }

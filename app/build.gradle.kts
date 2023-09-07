@@ -90,5 +90,6 @@ dependencies {
     //MY MODULES
     implementation(project(Modules.coreUi))
     implementation(project(Modules.featureLoginPresentation))
+    implementation(project(Modules.featureTrainingPresentation))
 
 }

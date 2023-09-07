@@ -14,7 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.eTime.a3rd_android_fitnesslot.navigation.ThirdTimeNavigation
 import com.eTime.a3rd_android_fitnesslot.ui.theme._3rdandroidfitnessloTTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     companion object {
