@@ -35,7 +35,7 @@ object Versions{
     //const val kotlinVersion = "1.5.31"
     const val kotlinVersion = "1.8.10"
     const val androidBuildToolsVersion = "7.0.4"
-    const val coroutinesVersion = "1.6.0"
+    const val coroutinesVersion = "1.7.3"
     const val appCompatVersion = "1.6.1"
     const val composeBomVersion = "2023.03.00"
     const val navigationVersion = "2.5.3"
@@ -93,6 +93,8 @@ object Material{
 
 object Coroutines {
     const val coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
+    const val android = "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
+    const val reactive = "org.jetbrains.kotlinx:kotlinx-coroutines-reactive:$coroutinesVersion"
 }
 
 object Polar {

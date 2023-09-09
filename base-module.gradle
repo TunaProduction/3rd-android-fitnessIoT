@@ -36,6 +36,9 @@ dependencies {
     kapt Hilt.hiltCompiler
     implementation Hilt.hiltAndroid
 
+    implementation Coroutines.coroutines
+    implementation Coroutines.android
+    implementation Coroutines.reactive
    /* testImplementation Testing.junit4
     testImplementation Testing.junitAndroidExt
     testImplementation Testing.truth

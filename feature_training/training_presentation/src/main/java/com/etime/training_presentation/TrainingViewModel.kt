@@ -13,6 +13,23 @@ import com.polar.sdk.api.model.PolarExerciseEntry
 import com.polar.sdk.api.model.PolarHrData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.reactivex.rxjava3.core.BackpressureStrategy
+import io.reactivex.rxjava3.core.Flowable
+import io.reactivex.rxjava3.core.Scheduler
+import io.reactivex.rxjava3.schedulers.Schedulers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.cancel
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onEmpty
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.reactive.asFlow
 import java.util.UUID
 import javax.inject.Inject
 
@@ -27,6 +44,9 @@ class TrainingViewModel @Inject constructor(
     private var deviceConnected = false
     private var bluetoothEnabled = false
     private var exerciseEntries: MutableList<PolarExerciseEntry> = mutableListOf()
+
+    private val _polarDevicesList = MutableStateFlow<List<PolarDeviceInfo>>(listOf())
+    val polarDevicesList = _polarDevicesList.asStateFlow()
 
     companion object {
         private const val TAG = "MainActivity"
@@ -117,6 +137,25 @@ class TrainingViewModel @Inject constructor(
                 "connect"
             }
             Log.e(TAG, "Failed to $attempt. Reason $polarInvalidArgument ")
+        }
+    }
+
+     fun searchDevice() {
+         val foundDevices = mutableListOf<PolarDeviceInfo>()
+        viewModelScope.launch {
+            api.searchForDevice()
+                .asFlow()
+                .onEach { polarDeviceInfo ->
+                    foundDevices.add(polarDeviceInfo)
+                    Log.d("may-connection", polarDeviceInfo.deviceId+" "+polarDeviceInfo.name+" "+polarDeviceInfo.isConnectable)
+                    //_polarDevicesList.value = foundDevices
+                    _polarDevicesList.tryEmit(foundDevices)
+                }
+                .collect{
+
+                }
+
+
         }
     }
 }
