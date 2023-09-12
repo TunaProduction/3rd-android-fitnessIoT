@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -23,6 +24,10 @@ fun TrackTrainingScreen(
     if(deviceId.value.isEmpty()) {
         backNavigation()
         return
+    }
+
+    LaunchedEffect(true) {
+        trainingViewModel.trackStreamTraining(deviceId.value)
     }
 
     trainingViewModel.getTraining(deviceId.value)

@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.cancel
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.onCompletion
@@ -188,45 +189,28 @@ class TrainingViewModel @Inject constructor(
 
     fun getTraining(deviceId: String) {
 
-        val isDisposed = accDisposable?.isDisposed ?: true
-        if (isDisposed) {
-            accDisposable = api.startAccStreaming(
-                deviceId,
-                PolarSensorSetting(getDefaultSettings())
-            )
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                    { polarAccelerometerData: PolarAccelerometerData ->
-                        for (data in polarAccelerometerData.samples) {
-                            _accData.value = data
-                            /*Log.d(
-                                TAG,
-                                "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
-                            )*/
-                        }
-                    },
-                    { error: Throwable ->
-                        //toggleButtonUp(accButton, R.string.start_acc_stream)
-                        Log.e(TAG, "ACC stream failed. Reason $error")
-                    },
-                    {
-                        //showToast("ACC stream complete")
-                        Log.d(TAG, "ACC stream complete")
-                    }
-                )
-        } else {
-            accDisposable?.dispose()
-        }
-
         viewModelScope.launch {
 
-            /*api.startAccStreaming(
+           /* try {
+                api.startAccStreaming(
+                    deviceId,
+                    PolarSensorSetting(getDefaultSettings())
+                )
+                    .asFlow()
+                    .collect()
+            }catch (e: Throwable){
+                Log.e("polar-error", e.message.toString()+ " causa: "+e.cause?.localizedMessage.toString())
+            }*/
+          /*  api.startAccStreaming(
                 deviceId,
                 PolarSensorSetting(getDefaultSettings())
             )
-                .observeOn(AndroidSchedulers.mainThread())
                 .asFlow()
+                .catch {
+                    Log.e("polar-error", it.message.toString()+ " causa: "+it.cause?.message+" "+it.cause?.localizedMessage)
+                }
                 .collect()*/
+
 
             api.startHrStreaming(deviceId)
                 .asFlow()
@@ -306,6 +290,33 @@ class TrainingViewModel @Inject constructor(
                     { Log.d(TAG, "HR stream complete") }
                 )*/
         }
+    }
+
+    fun trackStreamTraining(deviceId: String) {
+        accDisposable = api.startAccStreaming(
+            deviceId,
+            PolarSensorSetting(getDefaultSettings())
+        )
+            .observeOn(Schedulers.io())
+            .subscribe(
+                { polarAccelerometerData: PolarAccelerometerData ->
+                    for (data in polarAccelerometerData.samples) {
+                        _accData.value = data
+                        /*Log.d(
+                TAG,
+                "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
+            )*/
+                    }
+                },
+                { error: Throwable ->
+                    //toggleButtonUp(accButton, R.string.start_acc_stream)
+                    Log.e(TAG, "ACC stream failed. Reason $error")
+                },
+                {
+                    //showToast("ACC stream complete")
+                    Log.d(TAG, "ACC stream complete")
+                }
+            )
     }
 
     fun getDefaultSettings(): MutableMap<PolarSensorSetting.SettingType, Int> {
