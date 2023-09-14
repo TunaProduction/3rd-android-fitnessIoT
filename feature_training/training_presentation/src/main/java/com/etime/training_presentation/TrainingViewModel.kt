@@ -22,6 +22,8 @@ import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
+import kotlin.math.sqrt
+import kotlin.math.abs
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -70,6 +72,9 @@ class TrainingViewModel @Inject constructor(
 
     private val _accData = MutableStateFlow<PolarAccelerometerData.PolarAccelerometerDataSample?>(null)
     val accData = _accData.asStateFlow()
+
+    private val _acceleration = MutableStateFlow<Double>(0.000000)
+    val acceleration = _acceleration.asStateFlow()
 
     companion object {
         private const val TAG = "MainActivity"
@@ -302,11 +307,9 @@ class TrainingViewModel @Inject constructor(
                 { polarAccelerometerData: PolarAccelerometerData ->
                     for (data in polarAccelerometerData.samples) {
                         _accData.value = data
-                        /*Log.d(
-                TAG,
-                "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
-            )*/
+                        //getLinearAcceleration(data.x.toDouble(),data.y.toDouble(),data.z.toDouble())
                     }
+                    _acceleration.value = getDeltaLinearAcceleration(polarAccelerometerData.samples)
                 },
                 { error: Throwable ->
                     //toggleButtonUp(accButton, R.string.start_acc_stream)
@@ -375,6 +378,52 @@ class TrainingViewModel @Inject constructor(
             }*/
     }
      */
+    fun getDeltaLinearAcceleration(accelerometerData: List<PolarAccelerometerData.PolarAccelerometerDataSample>): Double {
+        // Initialize variables to store the previous accelerometer reading
+        var prevXAccelerationMg = 0
+        var prevYAccelerationMg = 0
+        var prevZAccelerationMg = 0
+
+        // Initialize variable to store the total linear acceleration change
+        var deltaLinearAcceleration = 0.0
+
+        for (dataSample in accelerometerData) {
+            // Extract x, y, and z acceleration values from the data sample
+            val xAccelerationMg = dataSample.x
+            val yAccelerationMg = dataSample.y
+            val zAccelerationMg = dataSample.z
+
+            // Calculate acceleration changes in mG (milligees)
+            val deltaX = xAccelerationMg - prevXAccelerationMg
+            val deltaY = yAccelerationMg - prevYAccelerationMg
+            val deltaZ = zAccelerationMg - prevZAccelerationMg
+
+            // Calculate linear acceleration change for the current reading in m/s²
+            val linearAccelerationChange = calculateLinearAcceleration(deltaX, deltaY, deltaZ)
+
+            // Accumulate the linear acceleration changes
+            deltaLinearAcceleration += linearAccelerationChange
+
+            // Update previous acceleration values for the next iteration
+            prevXAccelerationMg = xAccelerationMg
+            prevYAccelerationMg = yAccelerationMg
+            prevZAccelerationMg = zAccelerationMg
+        }
+
+        println("Total Linear Acceleration Change (m/s²): $deltaLinearAcceleration")
+        return deltaLinearAcceleration
+    }
+
+    fun calculateLinearAcceleration(deltaX: Int, deltaY: Int, deltaZ: Int): Double {
+        // Convert milligees to m/s² (1 mG = 0.001 m/s²)
+        val accelerationX = deltaX * 0.001
+        val accelerationY = deltaY * 0.001
+        val accelerationZ = deltaZ * 0.001
+
+        // Calculate the magnitude of linear acceleration
+        return sqrt(accelerationX * accelerationX + accelerationY * accelerationY + accelerationZ * accelerationZ)
+    }
+
 
     private fun disposeAllStreams() {
         accDisposable?.dispose()

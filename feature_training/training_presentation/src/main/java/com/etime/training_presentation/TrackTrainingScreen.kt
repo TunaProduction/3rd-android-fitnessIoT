@@ -20,6 +20,7 @@ fun TrackTrainingScreen(
     val deviceId = trainingViewModel.connectedDeviceId.collectAsState()
     val hrData = trainingViewModel.hrData.collectAsState()
     val accData = trainingViewModel.accData.collectAsState()
+    val acceleration = trainingViewModel.acceleration.collectAsState()
 
     if(deviceId.value.isEmpty()) {
         backNavigation()
@@ -114,6 +115,14 @@ fun TrackTrainingScreen(
                 )
                 Text(text = date.toString())
             }
+        }
+
+        Row {
+            Text(
+                text = "Total Linear Acceleration Change (m/s²): ",
+                fontWeight = FontWeight.Bold
+            )
+            Text(text = acceleration.value.toString())
         }
     }
 
