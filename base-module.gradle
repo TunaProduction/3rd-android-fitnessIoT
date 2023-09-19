@@ -1,5 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'dagger.hilt.android.plugin'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'kotlin-parcelize'
 
@@ -24,11 +25,11 @@ android {
     compileOptions {
         coreLibraryDesugaringEnabled true
 
-        sourceCompatibility JavaVersion.VERSION_18
-        targetCompatibility JavaVersion.VERSION_18
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '18'
+        jvmTarget = '17'
     }
 }
 
@@ -39,22 +40,36 @@ dependencies {
     implementation Coroutines.coroutines
     implementation Coroutines.android
     implementation Coroutines.reactive
-   /* testImplementation Testing.junit4
-    testImplementation Testing.junitAndroidExt
-    testImplementation Testing.truth
-    testImplementation Testing.coroutines
-    testImplementation Testing.turbine
-    testImplementation Testing.composeUiTest
-    testImplementation Testing.mockk
-    testImplementation Testing.mockWebServer
 
-    androidTestImplementation Testing.junit4
-    androidTestImplementation Testing.junitAndroidExt
-    androidTestImplementation Testing.truth
-    androidTestImplementation Testing.coroutines
-    androidTestImplementation Testing.turbine
-    androidTestImplementation Testing.composeUiTest
-    androidTestImplementation Testing.mockk
-    androidTestImplementation Testing.mockWebServer
-    androidTestImplementation Testing.hiltTesting*/
+    debugImplementation Debug.composeToolingUI
+    debugImplementation Debug.composeUIManifestTest
+    implementation platform(Compose.composeBom)
+    implementation Compose.compose
+    implementation Compose.preview
+    implementation Compose.compiler
+    implementation Compose.composeActivity
+
+    testImplementation Testing.jUnit
+    androidTestImplementation Testing.extJUnit
+    androidTestImplementation Testing.espresso
+    androidTestImplementation Testing.composeJUnit
+    implementation Material.material
+    /* testImplementation Testing.junit4
+     testImplementation Testing.junitAndroidExt
+     testImplementation Testing.truth
+     testImplementation Testing.coroutines
+     testImplementation Testing.turbine
+     testImplementation Testing.composeUiTest
+     testImplementation Testing.mockk
+     testImplementation Testing.mockWebServer
+
+     androidTestImplementation Testing.junit4
+     androidTestImplementation Testing.junitAndroidExt
+     androidTestImplementation Testing.truth
+     androidTestImplementation Testing.coroutines
+     androidTestImplementation Testing.turbine
+     androidTestImplementation Testing.composeUiTest
+     androidTestImplementation Testing.mockk
+     androidTestImplementation Testing.mockWebServer
+     androidTestImplementation Testing.hiltTesting*/
 }

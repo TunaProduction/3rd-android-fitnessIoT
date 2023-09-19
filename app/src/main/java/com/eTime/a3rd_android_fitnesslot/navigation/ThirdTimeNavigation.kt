@@ -1,6 +1,6 @@
 package com.eTime.a3rd_android_fitnesslot.navigation
 
-import androidx.compose.material3.Text
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
@@ -11,6 +11,7 @@ import com.etime.training_presentation.TrackTrainingScreen
 import com.etime.training_presentation.TrainingScreen
 import com.etime.training_presentation.TrainingViewModel
 
+@ExperimentalAnimationApi
 @Composable
 fun ThirdTimeNavigation() {
     val navController = rememberNavController()

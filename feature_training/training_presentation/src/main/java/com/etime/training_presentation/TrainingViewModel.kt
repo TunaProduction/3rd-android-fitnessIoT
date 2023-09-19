@@ -2,8 +2,13 @@ package com.etime.training_presentation
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.etime.core.util.pad
+import com.etime.training_presentation.util.detectFall
+import com.etime.training_presentation.util.getDeltaLinearAcceleration
+import com.etime.training_presentation.util.getWalkedDistance
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallback
 import com.polar.sdk.api.PolarBleApiDefaultImpl
@@ -41,8 +46,12 @@ import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
+import java.util.Timer
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.concurrent.fixedRateTimer
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
 class TrainingViewModel @Inject constructor(
@@ -75,6 +84,15 @@ class TrainingViewModel @Inject constructor(
 
     private val _acceleration = MutableStateFlow<Double>(0.000000)
     val acceleration = _acceleration.asStateFlow()
+
+    private val _distance = MutableStateFlow<Double>(0.000000)
+    val distance = _distance.asStateFlow()
+
+    private val _steps = MutableStateFlow<Int>(0)
+    val steps = _steps.asStateFlow()
+
+    private val _falls = MutableStateFlow<Int>(0)
+    val falls = _falls.asStateFlow()
 
     companion object {
         private const val TAG = "MainActivity"
@@ -309,7 +327,14 @@ class TrainingViewModel @Inject constructor(
                         _accData.value = data
                         //getLinearAcceleration(data.x.toDouble(),data.y.toDouble(),data.z.toDouble())
                     }
-                    _acceleration.value = getDeltaLinearAcceleration(polarAccelerometerData.samples)
+                    _acceleration.value = getDeltaLinearAcceleration(polarAccelerometerData.samples, 0.000000).first
+                    val walk = getWalkedDistance(polarAccelerometerData.samples)
+                    _distance.value = walk.first
+                    _steps.value = walk.second
+
+                    if(detectFall(polarAccelerometerData))
+                        _falls.value++
+
                 },
                 { error: Throwable ->
                     //toggleButtonUp(accButton, R.string.start_acc_stream)
@@ -330,6 +355,25 @@ class TrainingViewModel @Inject constructor(
         defaultSettings[PolarSensorSetting.SettingType.CHANNELS] = 3
 
         return defaultSettings
+    }
+
+    private lateinit var timer: Timer
+    var seconds = mutableStateOf("00")
+    var minutes = mutableStateOf("00")
+    var hours = mutableStateOf("00")
+    private var duration: Duration = Duration.ZERO
+
+    private val _pTimer = MutableStateFlow<String>("0")
+    val pTimer = _pTimer.asStateFlow()
+
+    fun startStopwatch() {
+        timer = fixedRateTimer(initialDelay = 1000L, period = 1000L) {
+            duration = duration.plus(1.seconds)
+
+            duration.toComponents { phours, pminutes, pseconds, _ ->
+                _pTimer.value = "$phours : $pminutes : $pseconds"
+            }
+        }
     }
 
     fun getSettings(deviceId: String, feature: PolarBleApi.PolarDeviceDataType): Flow<PolarSensorSetting> {
@@ -378,52 +422,6 @@ class TrainingViewModel @Inject constructor(
             }*/
     }
      */
-    fun getDeltaLinearAcceleration(accelerometerData: List<PolarAccelerometerData.PolarAccelerometerDataSample>): Double {
-        // Initialize variables to store the previous accelerometer reading
-        var prevXAccelerationMg = 0
-        var prevYAccelerationMg = 0
-        var prevZAccelerationMg = 0
-
-        // Initialize variable to store the total linear acceleration change
-        var deltaLinearAcceleration = 0.0
-
-        for (dataSample in accelerometerData) {
-            // Extract x, y, and z acceleration values from the data sample
-            val xAccelerationMg = dataSample.x
-            val yAccelerationMg = dataSample.y
-            val zAccelerationMg = dataSample.z
-
-            // Calculate acceleration changes in mG (milligees)
-            val deltaX = xAccelerationMg - prevXAccelerationMg
-            val deltaY = yAccelerationMg - prevYAccelerationMg
-            val deltaZ = zAccelerationMg - prevZAccelerationMg
-
-            // Calculate linear acceleration change for the current reading in m/s²
-            val linearAccelerationChange = calculateLinearAcceleration(deltaX, deltaY, deltaZ)
-
-            // Accumulate the linear acceleration changes
-            deltaLinearAcceleration += linearAccelerationChange
-
-            // Update previous acceleration values for the next iteration
-            prevXAccelerationMg = xAccelerationMg
-            prevYAccelerationMg = yAccelerationMg
-            prevZAccelerationMg = zAccelerationMg
-        }
-
-        println("Total Linear Acceleration Change (m/s²): $deltaLinearAcceleration")
-        return deltaLinearAcceleration
-    }
-
-    fun calculateLinearAcceleration(deltaX: Int, deltaY: Int, deltaZ: Int): Double {
-        // Convert milligees to m/s² (1 mG = 0.001 m/s²)
-        val accelerationX = deltaX * 0.001
-        val accelerationY = deltaY * 0.001
-        val accelerationZ = deltaZ * 0.001
-
-        // Calculate the magnitude of linear acceleration
-        return sqrt(accelerationX * accelerationX + accelerationY * accelerationY + accelerationZ * accelerationZ)
-    }
-
 
     private fun disposeAllStreams() {
         accDisposable?.dispose()
