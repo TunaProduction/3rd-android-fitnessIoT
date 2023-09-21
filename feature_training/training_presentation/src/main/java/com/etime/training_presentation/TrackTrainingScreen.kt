@@ -34,8 +34,9 @@ import com.etime.core.util.Constants.ACTION_SERVICE_START
 import com.etime.core.util.Constants.ACTION_SERVICE_STOP
 import java.sql.Date
 import java.sql.Timestamp
+import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalTime::class)
 @Composable
 fun TrackTrainingScreen(
     trainingViewModel: TrainingViewModel,
@@ -59,11 +60,12 @@ fun TrackTrainingScreen(
     }
 
     LaunchedEffect(true) {
-        trainingViewModel.trackStreamTraining(deviceId.value)
-        trainingViewModel.startStopwatch()
+        trainingViewModel.enableSdkMode(deviceId.value)
+        //trainingViewModel.trackStreamTraining(deviceId.value)
+        //trainingViewModel.startStopwatch()
     }
 
-    trainingViewModel.getTraining(deviceId.value)
+    //trainingViewModel.getTraining(deviceId.value)
 
     LazyColumn{
         item {

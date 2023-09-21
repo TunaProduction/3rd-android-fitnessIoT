@@ -10,7 +10,9 @@ import com.etime.auth_presentation.login.LoginScreen
 import com.etime.training_presentation.TrackTrainingScreen
 import com.etime.training_presentation.TrainingScreen
 import com.etime.training_presentation.TrainingViewModel
+import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalTime::class)
 @ExperimentalAnimationApi
 @Composable
 fun ThirdTimeNavigation() {

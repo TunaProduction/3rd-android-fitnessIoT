@@ -3,6 +3,7 @@ package com.etime.training_presentation
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.etime.core.util.pad
@@ -27,13 +28,19 @@ import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlin.math.sqrt
 import kotlin.math.abs
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.cancel
@@ -44,6 +51,7 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
 import java.util.Timer
@@ -52,8 +60,10 @@ import javax.inject.Inject
 import kotlin.concurrent.fixedRateTimer
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 @HiltViewModel
+@ExperimentalTime
 class TrainingViewModel @Inject constructor(
     @ApplicationContext context: Context
 ) : ViewModel(){
@@ -64,6 +74,7 @@ class TrainingViewModel @Inject constructor(
     private var bluetoothEnabled = false
 
     private var accDisposable: Disposable? = null
+    private var sdkModeDisposable: Disposable? = null
 
     private var exerciseEntries: MutableList<PolarExerciseEntry> = mutableListOf()
 
@@ -117,15 +128,14 @@ class TrainingViewModel @Inject constructor(
         )
     }
 
-    init {
-        startPolar()
-    }
+
 
     override fun onCleared() {
         super.onCleared()
         api.disconnectFromDevice(_connectedDeviceId.value)
         api.shutDown()
         disposeAllStreams()
+        scope.cancel()
     }
 
     fun startPolar(){
@@ -315,7 +325,22 @@ class TrainingViewModel @Inject constructor(
         }
     }
 
+    fun enableSdkMode(deviceId: String) {
+        sdkModeDisposable = api.enableSDKMode(deviceId)
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                {
+                    trackStreamTraining(deviceId)
+                    getTraining(deviceId)
+                },
+                { error ->
+                    val errorString = "SDK mode enable failed: $error"
+                    Log.e(TAG, errorString)
+                }
+            )
+    }
     fun trackStreamTraining(deviceId: String) {
+
         accDisposable = api.startAccStreaming(
             deviceId,
             PolarSensorSetting(getDefaultSettings())
@@ -349,22 +374,19 @@ class TrainingViewModel @Inject constructor(
 
     fun getDefaultSettings(): MutableMap<PolarSensorSetting.SettingType, Int> {
         val defaultSettings: MutableMap<PolarSensorSetting.SettingType, Int> = mutableMapOf()
-        defaultSettings[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
+        defaultSettings[PolarSensorSetting.SettingType.SAMPLE_RATE] = 416
         defaultSettings[PolarSensorSetting.SettingType.RESOLUTION] = 16
-        defaultSettings[PolarSensorSetting.SettingType.RANGE] = 8
+        defaultSettings[PolarSensorSetting.SettingType.RANGE] = 16
         defaultSettings[PolarSensorSetting.SettingType.CHANNELS] = 3
 
         return defaultSettings
     }
-
+/*
     private lateinit var timer: Timer
     var seconds = mutableStateOf("00")
     var minutes = mutableStateOf("00")
     var hours = mutableStateOf("00")
     private var duration: Duration = Duration.ZERO
-
-    private val _pTimer = MutableStateFlow<String>("0")
-    val pTimer = _pTimer.asStateFlow()
 
     fun startStopwatch() {
         timer = fixedRateTimer(initialDelay = 1000L, period = 1000L) {
@@ -374,7 +396,45 @@ class TrainingViewModel @Inject constructor(
                 _pTimer.value = "$phours : $pminutes : $pseconds"
             }
         }
+    }*/
+
+    private val scope = CoroutineScope(Dispatchers.Main + Job())
+    private val _pTimer = MutableStateFlow<String>("0")
+    val pTimer: StateFlow<String> get() = _pTimer
+
+    private val viewModelJob = SupervisorJob()
+    private val viewModelScope = CoroutineScope(Dispatchers.Main + viewModelJob)
+
+    var elapsedTime = MutableLiveData<Duration>()
+    private var seconds = 0
+
+    init {
+        startPolar()
+        startStopwatch()
+        elapsedTime.value = 0.seconds
+
     }
+
+    fun startStopwatch()
+    {
+        var totalSeconds = 0
+        viewModelScope.launch {
+            while (isActive) {
+                delay(1000) // delay for 1 second
+                totalSeconds++
+                val hours = totalSeconds / 3600
+                val minutes = (totalSeconds % 3600) / 60
+                val seconds = totalSeconds % 60
+                _pTimer.value = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+            }
+        }
+    }
+
+    fun stopStopwatch() {
+        viewModelScope.cancel()
+    }
+
+
 
     fun getSettings(deviceId: String, feature: PolarBleApi.PolarDeviceDataType): Flow<PolarSensorSetting> {
         /*return settings*/
@@ -425,6 +485,7 @@ class TrainingViewModel @Inject constructor(
 
     private fun disposeAllStreams() {
         accDisposable?.dispose()
+        sdkModeDisposable?.dispose()
     }
 
 }
