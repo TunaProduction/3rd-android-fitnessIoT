@@ -20,6 +20,8 @@ dependencies {
 
     //POLAR TOOLS
     implementation(Polar.sdk)
+    implementation(Charts.material3)
+    implementation(Charts.views)
     implementation(RxJava.java)
     implementation(RxJava.android)
 

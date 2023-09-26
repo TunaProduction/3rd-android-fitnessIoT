@@ -19,12 +19,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.model.PolarDeviceInfo
+import kotlin.time.ExperimentalTime
 
 
 // ATTENTION! Replace with the device ID from your device.
 private var deviceId = "8C4E5023"
 
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun TrainingScreen(
     trainingViewModel: TrainingViewModel = hiltViewModel(),
@@ -46,6 +48,7 @@ fun TrainingScreen(
 
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun DevicesList(trainingViewModel: TrainingViewModel){
     val foundDevicesList = trainingViewModel.polarDevicesList.collectAsState()

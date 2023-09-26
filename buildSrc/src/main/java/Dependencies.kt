@@ -43,6 +43,7 @@ object Versions{
     const val polarSdkVersion = "5.1.0"
     const val rxJavaVersion = "3.1.6"
     const val rxJavaAndroid = "3.0.2"
+    const val chartsVersion = "1.12.0"
 }
 
 object Compose{
@@ -110,4 +111,12 @@ object Build {
     const val androidBuildTools = "com.android.tools.build:gradle:$androidBuildToolsVersion"
     const val kotlinGradlePlugin = "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
     const val hiltAndroidGradlePlugin = "com.google.dagger:hilt-android-gradle-plugin:$hiltAndroidGradlePluginVersion"
+}
+
+object Charts {
+    // For `compose`. Creates a `ChartStyle` based on an M3 Material Theme.
+    const val material3 = "com.patrykandpatrick.vico:compose-m3:${Versions.chartsVersion}"
+
+    // For the view system.
+    const val views = "com.patrykandpatrick.vico:views:${Versions.chartsVersion}"
 }

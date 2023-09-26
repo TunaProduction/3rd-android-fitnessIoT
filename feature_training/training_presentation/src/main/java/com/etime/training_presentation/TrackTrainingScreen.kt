@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,9 +33,21 @@ import androidx.compose.ui.unit.dp
 import com.etime.core.util.Constants.ACTION_SERVICE_CANCEL
 import com.etime.core.util.Constants.ACTION_SERVICE_START
 import com.etime.core.util.Constants.ACTION_SERVICE_STOP
+import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
+import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
+import com.patrykandpatrick.vico.compose.chart.Chart
+import com.patrykandpatrick.vico.compose.chart.column.columnChart
+import com.patrykandpatrick.vico.compose.chart.line.lineChart
+import com.patrykandpatrick.vico.compose.style.ProvideChartStyle
+import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
+import com.patrykandpatrick.vico.core.entry.entryOf
 import java.sql.Date
 import java.sql.Timestamp
+import java.util.Random
 import kotlin.time.ExperimentalTime
+
+
+val chartEntryModelProducer: ChartEntryModelProducer = ChartEntryModelProducer()
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalTime::class)
 @Composable
@@ -53,6 +66,8 @@ fun TrackTrainingScreen(
     val steps = trainingViewModel.steps.collectAsState()
     val falls = trainingViewModel.falls.collectAsState()
     val timer = trainingViewModel.pTimer.collectAsState()
+    val movementTimer = trainingViewModel.movementTimer.collectAsState()
+    val ecgData = trainingViewModel.ecgEntry.collectAsState()
 
     if(deviceId.value.isEmpty()) {
         backNavigation()
@@ -61,6 +76,7 @@ fun TrackTrainingScreen(
 
     LaunchedEffect(true) {
         trainingViewModel.enableSdkMode(deviceId.value)
+        chartEntryModelProducer.setEntries(ecgData.value)
         //trainingViewModel.trackStreamTraining(deviceId.value)
         //trainingViewModel.startStopwatch()
     }
@@ -199,11 +215,38 @@ fun TrackTrainingScreen(
                     )
                 )
             }
+
+            Row {
+                Text(
+                    text = "MovementTimer: ",
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = movementTimer.value,
+                    style = TextStyle(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = Blue
+                    )
+                )
+            }
+
+
+            Chart(
+                chart = lineChart(),
+                chartModelProducer = chartEntryModelProducer,
+                startAxis = rememberStartAxis(),
+                bottomAxis = rememberBottomAxis(),
+            )
+
+
         }
 
     }
 
 }
+
 @ExperimentalAnimationApi
 fun addAnimation(duration: Int = 600): ContentTransform {
     return slideInVertically(animationSpec = tween(durationMillis = duration)) { height -> height } + fadeIn(
