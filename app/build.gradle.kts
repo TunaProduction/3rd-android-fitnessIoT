@@ -11,12 +11,12 @@ plugins {
 
 android {
     namespace = "com.eTime.a3rd_android_fitnesslot"
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.eTime.a3rd_android_fitnesslot"
         minSdk = 24
-        targetSdk = 33
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -88,6 +88,7 @@ dependencies {
     //debugImplementation("androidx.compose.ui:ui-tooling")
 
     //MY MODULES
+    implementation(project(Modules.core))
     implementation(project(Modules.coreUi))
     implementation(project(Modules.featureLoginPresentation))
     implementation(project(Modules.featureTrainingPresentation))

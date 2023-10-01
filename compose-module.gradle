@@ -44,11 +44,12 @@ dependencies {
     debugImplementation Debug.composeUIManifestTest
     implementation platform(Compose.composeBom)
     implementation Compose.compose
-    implementation Material.material
     implementation Compose.preview
     implementation Compose.compiler
+
     implementation Coil.coil
 
+    implementation Material.material
     implementation Hilt.hiltNavigation
     implementation Compose.composeActivity
 

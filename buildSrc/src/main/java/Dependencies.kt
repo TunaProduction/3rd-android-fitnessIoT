@@ -35,7 +35,7 @@ object Versions{
     //const val kotlinVersion = "1.5.31"
     const val kotlinVersion = "1.8.10"
     const val androidBuildToolsVersion = "7.0.4"
-    const val coroutinesVersion = "1.6.0"
+    const val coroutinesVersion = "1.7.3"
     const val appCompatVersion = "1.6.1"
     const val composeBomVersion = "2023.03.00"
     const val navigationVersion = "2.5.3"
@@ -43,6 +43,7 @@ object Versions{
     const val polarSdkVersion = "5.1.0"
     const val rxJavaVersion = "3.1.6"
     const val rxJavaAndroid = "3.0.2"
+    const val chartsVersion = "1.12.0"
 }
 
 object Compose{
@@ -93,6 +94,8 @@ object Material{
 
 object Coroutines {
     const val coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
+    const val android = "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
+    const val reactive = "org.jetbrains.kotlinx:kotlinx-coroutines-reactive:$coroutinesVersion"
 }
 
 object Polar {
@@ -108,4 +111,12 @@ object Build {
     const val androidBuildTools = "com.android.tools.build:gradle:$androidBuildToolsVersion"
     const val kotlinGradlePlugin = "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
     const val hiltAndroidGradlePlugin = "com.google.dagger:hilt-android-gradle-plugin:$hiltAndroidGradlePluginVersion"
+}
+
+object Charts {
+    // For `compose`. Creates a `ChartStyle` based on an M3 Material Theme.
+    const val material3 = "com.patrykandpatrick.vico:compose-m3:${Versions.chartsVersion}"
+
+    // For the view system.
+    const val views = "com.patrykandpatrick.vico:views:${Versions.chartsVersion}"
 }
