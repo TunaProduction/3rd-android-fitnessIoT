@@ -12,16 +12,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import com.etime.core_ui.LocalSpacing
 
 @Composable
 fun TTTrainingCell(
     name: String,
     value: String,
-    textStyle: TextStyle = MaterialTheme.typography.labelMedium,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.typography.headlineSmall,
+    valueTextStyle: TextStyle = MaterialTheme.typography.labelMedium,
     icon : Int? = null
 ) {
-    Column {
+    Column (
+        modifier = modifier
+    ) {
         Row {
             icon?.let{
                 Icon(
@@ -33,14 +38,16 @@ fun TTTrainingCell(
 
             Text(
                 text = name,
-                style = textStyle,
+                style = textStyle.copy(
+                    fontWeight = FontWeight.Bold
+                ),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(LocalSpacing.current.spaceSmall)
             )
         }
         Text(
             text = value,
-            style = textStyle,
+            style = valueTextStyle,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(LocalSpacing.current.spaceSmall)
         )

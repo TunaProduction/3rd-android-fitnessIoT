@@ -1,19 +1,16 @@
 package com.etime.training_presentation
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,18 +18,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.etime.core.util.Constants.ACTION_SERVICE_CANCEL
 import com.etime.core.util.Constants.ACTION_SERVICE_START
 import com.etime.core.util.Constants.ACTION_SERVICE_STOP
+import com.etime.core_ui.R
+import com.etime.core_ui.components.TTButton
+import com.etime.core_ui.components.TTTrainingCell
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
@@ -49,6 +52,122 @@ import kotlin.time.ExperimentalTime
 
 val chartEntryModelProducer: ChartEntryModelProducer = ChartEntryModelProducer()
 
+@OptIn(ExperimentalAnimationApi::class, ExperimentalTime::class)
+@Composable
+fun TrackTrainingScreen(
+    trainingViewModel: TrainingViewModel,
+    backNavigation: () -> Unit,
+) {
+    val context = LocalContext.current
+
+    val deviceId = trainingViewModel.connectedDeviceId.collectAsState()
+
+    if(deviceId.value.isEmpty()) {
+        backNavigation()
+        return
+    }
+
+    Column (
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+    ) {
+        TrackTrainingContent(trainingViewModel)
+        TrackTrainingControl()
+    }
+
+}
+
+@Composable
+fun TrackTrainingControl() {
+    Row(
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        TTButton(text = stringResource(id = R.string.training_start_button)) {
+            
+        }
+
+        TTButton(
+            text = stringResource(id = R.string.training_pause_button),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+        ) {
+
+        }
+    }
+}
+
+@OptIn(ExperimentalTime::class)
+@Composable
+fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
+
+    val deviceId = trainingViewModel.connectedDeviceId.collectAsState()
+    val hrData = trainingViewModel.hrData.collectAsState()
+    val accData = trainingViewModel.accData.collectAsState()
+    val acceleration = trainingViewModel.acceleration.collectAsState()
+    val distance = trainingViewModel.distance.collectAsState()
+    val steps = trainingViewModel.steps.collectAsState()
+    val falls = trainingViewModel.falls.collectAsState()
+    val timer = trainingViewModel.pTimer.collectAsState()
+    val movementTimer = trainingViewModel.movementTimer.collectAsState()
+    val ecgData = trainingViewModel.ecgEntry.collectAsState()
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        content = {
+
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_heart_rate_label),
+                        value = it.hr.toString(),
+                    )
+                }
+            }
+
+            acceleration.value?.let {
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_acceleration_label),
+                        value = it.toString(),
+                    )
+                }
+            }
+
+            item {
+                TTTrainingCell(
+                    name = stringResource(id = R.string.training_falls_label),
+                    value = falls.value.toString(),
+                )
+            }
+
+
+            item {
+                TTTrainingCell(
+                    name = stringResource(id = R.string.training_walked_distance_label),
+                    value = distance.value.toString(),
+                )
+            }
+
+            item {
+                TTTrainingCell(
+                    name = stringResource(id = R.string.training_timer_label),
+                    value = timer.value,
+                )
+            }
+
+            item {
+                TTTrainingCell(
+                    name = stringResource(id = R.string.training_steps_label),
+                    value = movementTimer.value,
+                )
+            }
+        }
+    )
+}
+
+
+/*
 @OptIn(ExperimentalAnimationApi::class, ExperimentalTime::class)
 @Composable
 fun TrackTrainingScreen(
@@ -254,4 +373,4 @@ fun addAnimation(duration: Int = 600): ContentTransform {
     ) with slideOutVertically(animationSpec = tween(durationMillis = duration)) { height -> height } + fadeOut(
         animationSpec = tween(durationMillis = duration)
     )
-}
+}*/

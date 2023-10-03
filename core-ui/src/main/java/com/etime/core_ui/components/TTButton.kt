@@ -3,6 +3,8 @@ package com.etime.core_ui.components
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +18,7 @@ fun TTButton(
     text: String,
     modifier: Modifier = Modifier,
     isEnabled: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
     textStyle: TextStyle = MaterialTheme.typography.labelMedium,
     onClick: () -> Unit
 ) {
@@ -23,7 +26,8 @@ fun TTButton(
         onClick = onClick,
         modifier = modifier,
         enabled = isEnabled,
-        shape = RoundedCornerShape(100.dp)
+        shape = RoundedCornerShape(100.dp),
+        colors = colors
     ) {
         Text(
             text = text,
