@@ -25,9 +25,12 @@ import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
 import java.util.UUID
@@ -82,10 +85,18 @@ class TrainingViewModel @Inject constructor(
     private val _falls = MutableStateFlow<Int>(0)
     val falls = _falls.asStateFlow()
 
+    private val _onGoing = MutableStateFlow<Boolean>(false)
+    val onGoing = _onGoing.asStateFlow()
+
+    private val _timer = MutableStateFlow<String>("0")
+    val timer: StateFlow<String> get() = _timer
+
     private val _isMoving = MutableStateFlow<Boolean>(false)
 
     private val _hrActivated = MutableStateFlow<Boolean>(false)
     val hrActivated = _hrActivated.asStateFlow()
+
+    var totalSeconds = 0
 
     private val api: PolarBleApi by lazy {
         // Notice all features are enabled
@@ -115,8 +126,28 @@ class TrainingViewModel @Inject constructor(
         disposeAllStreams()
     }
 
-    fun enableSdkMode(deviceId: String) {
-        trackStreamTraining(deviceId)
+    fun startStopwatch()
+    {
+        viewModelScope.launch {
+            while (isActive) {
+                delay(1000) // delay for 1 second
+                if(_onGoing.value){
+                    totalSeconds++
+                    val hours = totalSeconds / 3600
+                    val minutes = (totalSeconds % 3600) / 60
+                    val seconds = totalSeconds % 60
+                    _timer.value = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                }
+            }
+        }
+    }
+
+    fun pauseStopWatch() {
+        _onGoing.value = false
+    }
+
+    fun restartStopWatch() {
+        _onGoing.value = true
     }
 
     fun trackStreamTraining(deviceId: String) {
@@ -125,9 +156,11 @@ class TrainingViewModel @Inject constructor(
             .observeOn(Schedulers.io())
             .subscribe(
                 { hrData: PolarHrData ->
-                    for (sample in hrData.samples) {
-                        _hrData.value = sample
-                        Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
+                    if(_onGoing.value){
+                        for (sample in hrData.samples) {
+                            _hrData.value = sample
+                            Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
+                        }
                     }
                 },
                 { error: Throwable ->
@@ -143,20 +176,25 @@ class TrainingViewModel @Inject constructor(
             .observeOn(Schedulers.io())
             .subscribe(
                 { polarAccelerometerData: PolarAccelerometerData ->
-                    for (data in polarAccelerometerData.samples) {
-                        _accData.value = data
-                        //getLinearAcceleration(data.x.toDouble(),data.y.toDouble(),data.z.toDouble())
+                    if(_onGoing.value) {
+                        for (data in polarAccelerometerData.samples) {
+                            _accData.value = data
+                            //getLinearAcceleration(data.x.toDouble(),data.y.toDouble(),data.z.toDouble())
+                        }
+
+                        _acceleration.value = getDeltaLinearAcceleration(
+                            polarAccelerometerData.samples,
+                            0.000000
+                        ).first
+                        val walk = getWalkedDistance(polarAccelerometerData.samples)
+                        _distance.value = walk.first
+                        _steps.value = walk.second
+
+                        _isMoving.value = isHeavyMovement(polarAccelerometerData)
+
+                        if (detectFall(polarAccelerometerData))
+                            _falls.value++
                     }
-
-                    _acceleration.value = getDeltaLinearAcceleration(polarAccelerometerData.samples, 0.000000).first
-                    val walk = getWalkedDistance(polarAccelerometerData.samples)
-                    _distance.value = walk.first
-                    _steps.value = walk.second
-
-                    _isMoving.value = isHeavyMovement(polarAccelerometerData)
-
-                    if(detectFall(polarAccelerometerData))
-                        _falls.value++
                 },
                 { error: Throwable ->
                     //toggleButtonUp(accButton, R.string.start_acc_stream)
@@ -167,6 +205,8 @@ class TrainingViewModel @Inject constructor(
                     Log.d(TAG, "ACC stream complete")
                 }
             )
+
+        startStopwatch()
 
     }
 

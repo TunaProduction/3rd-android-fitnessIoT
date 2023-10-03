@@ -16,11 +16,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,21 +61,30 @@ val chartEntryModelProducer: ChartEntryModelProducer = ChartEntryModelProducer()
 @Composable
 fun TrackTrainingScreen(
     trainingViewModel: TrainingViewModel,
+    trigger: Boolean,
     backNavigation: () -> Unit,
 ) {
+
     val context = LocalContext.current
 
+    val count by rememberUpdatedState(trigger)
     val deviceId = trainingViewModel.connectedDeviceId.collectAsState()
+
+    Log.d("TrackTrainingScreen", "Recomposition triggered - Device ID: ${deviceId.value}")
 
     if(deviceId.value.isEmpty()) {
         backNavigation()
         return
     }
 
-    LaunchedEffect(true) {
+    DisposableEffect(key1 = deviceId.value, effect = {
+        trainingViewModel.restartStopWatch()
         trainingViewModel.trackStreamTraining(deviceId.value)
-    }
 
+        onDispose {
+            // Add cleanup code here if needed
+        }
+    })
     Column (
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -80,26 +92,32 @@ fun TrackTrainingScreen(
             .fillMaxHeight()
     ) {
         TrackTrainingContent(trainingViewModel)
-        TrackTrainingControl()
+        TrackTrainingControl(
+            onPause = { trainingViewModel.pauseStopWatch() },
+            onRestart = { trainingViewModel.restartStopWatch() }
+        )
     }
 
 }
 
 @Composable
-fun TrackTrainingControl() {
+fun TrackTrainingControl(
+    onPause: () -> Unit = {},
+    onRestart: () -> Unit = {}
+) {
     Row(
         horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.fillMaxWidth()
     ) {
         TTButton(text = stringResource(id = R.string.training_start_button)) {
-
+            onRestart.invoke()
         }
 
         TTButton(
             text = stringResource(id = R.string.training_pause_button),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
-
+            onPause.invoke()
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiDefaultImpl
+import androidx.compose.runtime.LaunchedEffect
 import com.polar.sdk.api.model.PolarDeviceInfo
 import kotlin.time.ExperimentalTime
 
@@ -36,7 +37,9 @@ fun TrainingScreen(
     val isConnected = trainingViewModel.isConnected.collectAsState()
 
     if(isConnected.value) {
-        onNextClick()
+        LaunchedEffect(true){
+            onNextClick()
+        }
     }
 
     Column (horizontalAlignment = Alignment.CenterHorizontally){

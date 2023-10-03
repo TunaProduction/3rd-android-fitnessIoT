@@ -42,6 +42,7 @@ fun ThirdTimeNavigation() {
         composable(Route.TRACK_TRAINING){
             TrackTrainingScreen(
                 trainingViewModel = trainingViewModel,
+                trigger = true,
                 backNavigation = {
                     navController.popBackStack()
                 }
