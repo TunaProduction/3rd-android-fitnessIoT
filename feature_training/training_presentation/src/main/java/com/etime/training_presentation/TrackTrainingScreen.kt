@@ -3,6 +3,7 @@ package com.etime.training_presentation
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.etime.core.util.Constants.ACTION_SERVICE_CANCEL
 import com.etime.core.util.Constants.ACTION_SERVICE_START
 import com.etime.core.util.Constants.ACTION_SERVICE_STOP
+import com.etime.core_ui.LocalSpacing
 import com.etime.core_ui.R
 import com.etime.core_ui.components.TTButton
 import com.etime.core_ui.components.TTTrainingCell
@@ -67,6 +69,10 @@ fun TrackTrainingScreen(
         return
     }
 
+    LaunchedEffect(true) {
+        trainingViewModel.trackStreamTraining(deviceId.value)
+    }
+
     Column (
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -82,10 +88,11 @@ fun TrackTrainingScreen(
 @Composable
 fun TrackTrainingControl() {
     Row(
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier = Modifier.fillMaxWidth()
     ) {
         TTButton(text = stringResource(id = R.string.training_start_button)) {
-            
+
         }
 
         TTButton(
@@ -101,19 +108,25 @@ fun TrackTrainingControl() {
 @Composable
 fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
 
-    val deviceId = trainingViewModel.connectedDeviceId.collectAsState()
+    //val deviceId = trainingViewModel.connectedDeviceId.collectAsState()
     val hrData = trainingViewModel.hrData.collectAsState()
-    val accData = trainingViewModel.accData.collectAsState()
     val acceleration = trainingViewModel.acceleration.collectAsState()
+    val falls = trainingViewModel.falls.collectAsState()
     val distance = trainingViewModel.distance.collectAsState()
     val steps = trainingViewModel.steps.collectAsState()
-    val falls = trainingViewModel.falls.collectAsState()
+    /*
     val timer = trainingViewModel.pTimer.collectAsState()
     val movementTimer = trainingViewModel.movementTimer.collectAsState()
-    val ecgData = trainingViewModel.ecgEntry.collectAsState()
+    val ecgData = trainingViewModel.ecgEntry.collectAsState()*/
 
     LazyVerticalGrid(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
         columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(
+            horizontal = LocalSpacing.current.spaceMedium
+        ),
         content = {
 
             hrData.value?.let{
@@ -151,6 +164,13 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
 
             item {
                 TTTrainingCell(
+                    name = stringResource(id = R.string.training_steps_label),
+                    value = steps.value.toString(),
+                )
+            }
+
+            /*item {
+                TTTrainingCell(
                     name = stringResource(id = R.string.training_timer_label),
                     value = timer.value,
                 )
@@ -161,7 +181,7 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
                     name = stringResource(id = R.string.training_steps_label),
                     value = movementTimer.value,
                 )
-            }
+            }*/
         }
     )
 }
