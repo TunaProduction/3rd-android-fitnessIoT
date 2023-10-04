@@ -4,11 +4,13 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.etime.training_presentation.trackTraining.TrainingStatus
 import com.etime.training_presentation.util.detectFall
 import com.etime.training_presentation.util.getDeltaLinearAcceleration
 import com.etime.training_presentation.util.getWalkedDistance
 import com.etime.training_presentation.util.isHeavyMovement
 import com.patrykandpatrick.vico.core.entry.FloatEntry
+import com.patrykandpatrick.vico.core.entry.entryOf
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallback
 import com.polar.sdk.api.PolarBleApiDefaultImpl
@@ -16,6 +18,7 @@ import com.polar.sdk.api.errors.PolarInvalidArgument
 import com.polar.sdk.api.errors.PolarNotificationNotEnabled
 import com.polar.sdk.api.model.PolarAccelerometerData
 import com.polar.sdk.api.model.PolarDeviceInfo
+import com.polar.sdk.api.model.PolarEcgData
 import com.polar.sdk.api.model.PolarHrData
 import com.polar.sdk.api.model.PolarPpgData
 import com.polar.sdk.api.model.PolarSensorSetting
@@ -91,10 +94,23 @@ class TrainingViewModel @Inject constructor(
     private val _timer = MutableStateFlow<String>("0")
     val timer: StateFlow<String> get() = _timer
 
-    private val _isMoving = MutableStateFlow<Boolean>(false)
-
     private val _hrActivated = MutableStateFlow<Boolean>(false)
     val hrActivated = _hrActivated.asStateFlow()
+
+    private val _trainingStatus = MutableStateFlow<TrainingStatus>(TrainingStatus.OnGoing)
+    val trainingStatus = _trainingStatus.asStateFlow()
+
+    private val _movementTimer = MutableStateFlow<String>("0")
+    val movementTimer: StateFlow<String> get() = _movementTimer
+
+    private val _isMoving = MutableStateFlow<Boolean>(false)
+    val isMoving: StateFlow<Boolean> get() = _isMoving
+
+    private val _hrChartData = MutableStateFlow<List<PolarEcgData.PolarEcgDataSample>>(listOf())
+    val hrChartData = _hrChartData.asStateFlow()
+
+    private val _hrChartEntry = MutableStateFlow<List<FloatEntry>>(listOf())
+    val hrChartEntry = _hrChartEntry.asStateFlow()
 
     var totalSeconds = 0
 
@@ -126,6 +142,10 @@ class TrainingViewModel @Inject constructor(
         disposeAllStreams()
     }
 
+    fun changeTrainingStatus(status: TrainingStatus) {
+        _trainingStatus.value = status
+    }
+
     fun startStopwatch()
     {
         viewModelScope.launch {
@@ -142,16 +162,40 @@ class TrainingViewModel @Inject constructor(
         }
     }
 
+    fun startMovementTimer() {
+        var totalSeconds = 0
+        viewModelScope.launch {
+            while (isActive) {
+                delay(1000) // delay for 1 second
+                if(_isMoving.value && _onGoing.value){
+                    totalSeconds++
+                    val hours = totalSeconds / 3600
+                    val minutes = (totalSeconds % 3600) / 60
+                    val seconds = totalSeconds % 60
+                    _movementTimer .value = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                }
+            }
+        }
+    }
+
     fun pauseStopWatch() {
         _onGoing.value = false
+        changeTrainingStatus(TrainingStatus.Paused)
     }
 
     fun restartStopWatch() {
         _onGoing.value = true
+        changeTrainingStatus(TrainingStatus.OnGoing)
+    }
+
+    fun finishTraining() {
+        _onGoing.value = false
+        changeTrainingStatus(TrainingStatus.Finished)
     }
 
     fun trackStreamTraining(deviceId: String) {
-
+        val ecgCreatedData = mutableListOf<FloatEntry>()
+        _onGoing.value = true
         hrDisposable = api.startHrStreaming(deviceId)
             .observeOn(Schedulers.io())
             .subscribe(
@@ -159,8 +203,13 @@ class TrainingViewModel @Inject constructor(
                     if(_onGoing.value){
                         for (sample in hrData.samples) {
                             _hrData.value = sample
+
+                            ecgCreatedData.add(entryOf(totalSeconds.toFloat(), sample.hr))
+                            _hrChartEntry.tryEmit(ecgCreatedData)
                             Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
                         }
+
+
                     }
                 },
                 { error: Throwable ->
@@ -177,11 +226,7 @@ class TrainingViewModel @Inject constructor(
             .subscribe(
                 { polarAccelerometerData: PolarAccelerometerData ->
                     if(_onGoing.value) {
-                        for (data in polarAccelerometerData.samples) {
-                            _accData.value = data
-                            //getLinearAcceleration(data.x.toDouble(),data.y.toDouble(),data.z.toDouble())
-                        }
-
+                        Log.d(TAG, "ACC RUNNING")
                         _acceleration.value = getDeltaLinearAcceleration(
                             polarAccelerometerData.samples,
                             0.000000
@@ -207,6 +252,7 @@ class TrainingViewModel @Inject constructor(
             )
 
         startStopwatch()
+        startMovementTimer()
 
     }
 

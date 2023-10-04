@@ -15,5 +15,5 @@
     <string name="training_start_button">Start</string>
     <string name="training_pause_button">Pause</string>
     <string name="training_continue_button">Continue</string>
-    <string name="training_stop_button">Restart</string>
+    <string name="training_stop_button">Stop</string>
 </resources>

@@ -1,4 +1,4 @@
-package com.etime.training_presentation
+package com.etime.training_presentation.trackTraining
 
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -9,49 +9,32 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.etime.core.util.Constants.ACTION_SERVICE_CANCEL
-import com.etime.core.util.Constants.ACTION_SERVICE_START
-import com.etime.core.util.Constants.ACTION_SERVICE_STOP
 import com.etime.core_ui.LocalSpacing
 import com.etime.core_ui.R
 import com.etime.core_ui.components.TTButton
 import com.etime.core_ui.components.TTTrainingCell
+import com.etime.training_presentation.TrainingViewModel
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
-import com.patrykandpatrick.vico.compose.chart.column.columnChart
 import com.patrykandpatrick.vico.compose.chart.line.lineChart
-import com.patrykandpatrick.vico.compose.style.ProvideChartStyle
 import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
-import com.patrykandpatrick.vico.core.entry.entryOf
-import java.sql.Date
-import java.sql.Timestamp
-import java.util.Random
 import kotlin.time.ExperimentalTime
 
 
@@ -77,14 +60,18 @@ fun TrackTrainingScreen(
         return
     }
 
+    val trainingStatus = trainingViewModel.trainingStatus.collectAsState()
+    val hrChartData = trainingViewModel.hrChartEntry.collectAsState()
+    chartEntryModelProducer.setEntries(hrChartData.value)
+
     DisposableEffect(key1 = deviceId.value, effect = {
-        trainingViewModel.restartStopWatch()
         trainingViewModel.trackStreamTraining(deviceId.value)
 
         onDispose {
             // Add cleanup code here if needed
         }
     })
+
     Column (
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -92,9 +79,25 @@ fun TrackTrainingScreen(
             .fillMaxHeight()
     ) {
         TrackTrainingContent(trainingViewModel)
+
+        Chart(
+            chart = lineChart(),
+            chartModelProducer = chartEntryModelProducer,
+            startAxis = rememberStartAxis(),
+            bottomAxis = rememberBottomAxis(),
+        )
+
         TrackTrainingControl(
-            onPause = { trainingViewModel.pauseStopWatch() },
-            onRestart = { trainingViewModel.restartStopWatch() }
+            trainingStatus = trainingStatus.value,
+            onPause = {
+                if (trainingStatus.value == TrainingStatus.OnGoing){
+                    trainingViewModel.pauseStopWatch()
+                }else{
+                    trainingViewModel.finishTraining()
+                }
+              },
+            onRestart = { trainingViewModel.restartStopWatch() },
+            onFinished = { Log.d("TrackTraining", "FINISHED") }
         )
     }
 
@@ -102,22 +105,50 @@ fun TrackTrainingScreen(
 
 @Composable
 fun TrackTrainingControl(
+    trainingStatus: TrainingStatus,
     onPause: () -> Unit = {},
-    onRestart: () -> Unit = {}
+    onRestart: () -> Unit = {},
+    onFinished: () -> Unit = {}
 ) {
+    var startContinueString by remember { mutableIntStateOf(R.string.training_start_button) }
+    var pauseStopString by remember { mutableIntStateOf(R.string.training_pause_button) }
+    var startContinueVisibility by remember { mutableStateOf(true) }
+    var pauseStopAction by remember { mutableStateOf(true) }
+
     Row(
         horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.fillMaxWidth()
     ) {
-        TTButton(text = stringResource(id = R.string.training_start_button)) {
-            onRestart.invoke()
+
+        when (trainingStatus) {
+            TrainingStatus.OnGoing -> {
+                startContinueVisibility = false
+                pauseStopAction = true
+                pauseStopString = R.string.training_pause_button
+            }
+            TrainingStatus.Paused -> {
+                startContinueVisibility = true
+                pauseStopAction = false
+                pauseStopString = R.string.training_stop_button
+            }
+            TrainingStatus.Finished -> {}
+        }
+
+        if(startContinueVisibility) {
+            TTButton(text = stringResource(id = startContinueString)) {
+                onRestart.invoke()
+            }
         }
 
         TTButton(
-            text = stringResource(id = R.string.training_pause_button),
+            text = stringResource(id = pauseStopString),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
-            onPause.invoke()
+            if( pauseStopAction ) {
+                onPause.invoke()
+            }else{
+                onFinished.invoke()
+            }
         }
     }
 }
@@ -132,10 +163,10 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
     val falls = trainingViewModel.falls.collectAsState()
     val distance = trainingViewModel.distance.collectAsState()
     val steps = trainingViewModel.steps.collectAsState()
-    /*
-    val timer = trainingViewModel.pTimer.collectAsState()
+
+    val timer = trainingViewModel.timer.collectAsState()
     val movementTimer = trainingViewModel.movementTimer.collectAsState()
-    val ecgData = trainingViewModel.ecgEntry.collectAsState()*/
+    //val ecgData = trainingViewModel.ecgEntry.collectAsState()*/
 
     LazyVerticalGrid(
         modifier = Modifier
@@ -187,7 +218,7 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
                 )
             }
 
-            /*item {
+            item {
                 TTTrainingCell(
                     name = stringResource(id = R.string.training_timer_label),
                     value = timer.value,
@@ -199,7 +230,7 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
                     name = stringResource(id = R.string.training_steps_label),
                     value = movementTimer.value,
                 )
-            }*/
+            }
         }
     )
 }
