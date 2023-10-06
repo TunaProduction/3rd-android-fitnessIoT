@@ -1,6 +1,8 @@
 package com.etime.training_presentation
 
 import android.content.Context
+import android.os.Build
+import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,6 +11,7 @@ import com.etime.training_presentation.util.detectFall
 import com.etime.training_presentation.util.getDeltaLinearAcceleration
 import com.etime.training_presentation.util.getWalkedDistance
 import com.etime.training_presentation.util.isHeavyMovement
+import com.google.gson.Gson
 import com.patrykandpatrick.vico.core.entry.FloatEntry
 import com.patrykandpatrick.vico.core.entry.entryOf
 import com.polar.sdk.api.PolarBleApi
@@ -36,6 +39,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
+import org.json.JSONException
+import org.json.JSONObject
+import java.io.File
+import java.io.FileWriter
+import java.io.IOException
+import java.io.PrintWriter
+import java.nio.charset.Charset
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.time.ExperimentalTime
@@ -111,6 +121,12 @@ class TrainingViewModel @Inject constructor(
 
     private val _hrChartEntry = MutableStateFlow<List<FloatEntry>>(listOf())
     val hrChartEntry = _hrChartEntry.asStateFlow()
+
+    private val _heartTrack = MutableStateFlow<MutableList<PolarHrData.PolarHrSample>>(mutableListOf())
+    var heartTrackData = listOf<PolarHrData.PolarHrSample>()
+
+    private val _accelerationTrack = MutableStateFlow<MutableList<Double>>(mutableListOf())
+    var accelerationTrackData = listOf<Double>()
 
     var totalSeconds = 0
 
@@ -188,13 +204,17 @@ class TrainingViewModel @Inject constructor(
         changeTrainingStatus(TrainingStatus.OnGoing)
     }
 
-    fun finishTraining() {
+    fun finishTraining(context: Context) {
         _onGoing.value = false
+        heartTrackData = _heartTrack.value
+        accelerationTrackData = _accelerationTrack.value
         changeTrainingStatus(TrainingStatus.Finished)
+        createTrainingFile(context)
     }
 
     fun trackStreamTraining(deviceId: String) {
         val ecgCreatedData = mutableListOf<FloatEntry>()
+
         _onGoing.value = true
         hrDisposable = api.startHrStreaming(deviceId)
             .observeOn(Schedulers.io())
@@ -203,6 +223,7 @@ class TrainingViewModel @Inject constructor(
                     if(_onGoing.value){
                         for (sample in hrData.samples) {
                             _hrData.value = sample
+                            _heartTrack.value.add(sample)
 
                             ecgCreatedData.add(entryOf(totalSeconds.toFloat(), sample.hr))
                             _hrChartEntry.tryEmit(ecgCreatedData)
@@ -231,6 +252,9 @@ class TrainingViewModel @Inject constructor(
                             polarAccelerometerData.samples,
                             0.000000
                         ).first
+
+                        _accelerationTrack.value.add(_acceleration.value)
+
                         val walk = getWalkedDistance(polarAccelerometerData.samples)
                         _distance.value = walk.first
                         _steps.value = walk.second
@@ -349,6 +373,56 @@ class TrainingViewModel @Inject constructor(
         })
     }
 
+    private fun createTrainingFile(context: Context) {
+        val avgHr = heartTrackData.map { it.hr }.average()
+        val avgAcceleration = accelerationTrackData.average()
+
+        val training = FinishedTrainingData(
+            avgHr.toString(),
+            avgAcceleration.toString(),
+            _falls.value,
+            _steps.value,
+            _movementTimer.value,
+            _timer.value
+        )
+
+
+        saveTrainingToFile(context, training, "training.json")
+       /* val path = "/json/training.json"
+        try {
+            createFile()?.let {
+                it.printWriter().use {
+                    val gson = Gson()
+                    val jsonString = gson.toJson(training)
+                    it.write(jsonString)
+                }
+            }
+            /*PrintWriter(FileWriter(path)).use {
+                val gson = Gson()
+                val jsonString = gson.toJson(training)
+                it.write(jsonString)
+            }*/
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }*/
+    }
+
+
+
+    fun saveTrainingToFile(context: Context, training: FinishedTrainingData, fileName: String) {
+        val gson = Gson()
+        val jsonString = gson.toJson(training)
+
+        try {
+            val file = File(context.filesDir, fileName)
+            val printWriter = PrintWriter(FileWriter(file))
+            printWriter.print(jsonString)
+            printWriter.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+    }
+
     private fun disposeAllStreams() {
         accDisposable?.dispose()
         hrDisposable?.dispose()
@@ -356,3 +430,12 @@ class TrainingViewModel @Inject constructor(
     }
 
 }
+
+data class FinishedTrainingData (
+    val avgHr: String,
+    val avgAcceleration: String,
+    val falls: Int,
+    val steps: Int,
+    val motionTime: String,
+    val totalTime: String
+)

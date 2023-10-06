@@ -93,11 +93,11 @@ fun TrackTrainingScreen(
                 if (trainingStatus.value == TrainingStatus.OnGoing){
                     trainingViewModel.pauseStopWatch()
                 }else{
-                    trainingViewModel.finishTraining()
+                  //  trainingViewModel.finishTraining()
                 }
               },
             onRestart = { trainingViewModel.restartStopWatch() },
-            onFinished = { Log.d("TrackTraining", "FINISHED") }
+            onFinished = { trainingViewModel.finishTraining(context) }
         )
     }
 

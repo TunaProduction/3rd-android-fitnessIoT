@@ -18,6 +18,8 @@ dependencies {
     implementation(Coroutines.android)
     implementation(Coroutines.reactive)
 
+    implementation(Gson.gson)
+
     //POLAR TOOLS
     implementation(Polar.sdk)
     implementation(Charts.material3)

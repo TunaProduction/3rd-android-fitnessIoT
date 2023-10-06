@@ -1,31 +1,26 @@
 package com.eTime.a3rd_android_fitnesslot
 
 import android.Manifest
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.eTime.a3rd_android_fitnesslot.navigation.ThirdTimeNavigation
 import com.eTime.a3rd_android_fitnesslot.ui.theme._3rdandroidfitnessloTTheme
 import dagger.hilt.android.AndroidEntryPoint
+
 
 @ExperimentalAnimationApi
 @AndroidEntryPoint
@@ -48,6 +43,21 @@ class MainActivity : ComponentActivity() {
             }
         } else {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), PERMISSION_REQUEST_CODE)
+        }
+
+        //Verifica permisos para Android 6.0+
+        val permissionCheck = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+            Log.i("Mensaje", "No se tiene permiso para leer.")
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                225
+            )
+        } else {
+            Log.i("Mensaje", "Se tiene permiso para leer!")
         }
 
         setContent {

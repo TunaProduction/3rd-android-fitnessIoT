@@ -44,6 +44,7 @@ object Versions{
     const val rxJavaVersion = "3.1.6"
     const val rxJavaAndroid = "3.0.2"
     const val chartsVersion = "1.12.0"
+    const val gsonVersion = "2.10.1"
 }
 
 object Compose{
@@ -119,4 +120,8 @@ object Charts {
 
     // For the view system.
     const val views = "com.patrykandpatrick.vico:views:${Versions.chartsVersion}"
+}
+
+object Gson {
+    const val gson = "com.google.code.gson:gson:${Versions.gsonVersion}"
 }
