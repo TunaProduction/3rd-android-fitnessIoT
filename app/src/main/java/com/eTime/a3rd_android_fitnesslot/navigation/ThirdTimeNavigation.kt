@@ -3,10 +3,12 @@ package com.eTime.a3rd_android_fitnesslot.navigation
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavOptions
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.etime.auth_presentation.login.LoginScreen
+import com.etime.training_presentation.ConnectDeviceScreen
 import com.etime.training_presentation.trackTraining.TrackTrainingScreen
 import com.etime.training_presentation.TrainingScreen
 import com.etime.training_presentation.TrainingViewModel
@@ -35,6 +37,18 @@ fun ThirdTimeNavigation() {
                 trainingViewModel = trainingViewModel,
                 onNextClick = {
                     navController.navigate(Route.TRACK_TRAINING)
+                },
+                onRequestConnectionClick = {
+                    navController.navigate(Route.CONNECT_DEVICE)
+                }
+            )
+        }
+
+        composable(Route.CONNECT_DEVICE){
+            ConnectDeviceScreen(
+                trainingViewModel = trainingViewModel,
+                onConnectedDevice = {
+                    navController.popBackStack()
                 }
             )
         }

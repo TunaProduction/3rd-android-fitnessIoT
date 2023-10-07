@@ -4,4 +4,5 @@ object Route {
     const val LOGIN = "login"
     const val TRAINING = "training"
     const val TRACK_TRAINING = "track_training"
+    const val CONNECT_DEVICE = "connect_device"
 }

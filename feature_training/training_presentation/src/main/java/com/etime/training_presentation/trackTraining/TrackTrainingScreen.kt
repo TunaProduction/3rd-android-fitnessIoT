@@ -40,7 +40,7 @@ import kotlin.time.ExperimentalTime
 
 val chartEntryModelProducer: ChartEntryModelProducer = ChartEntryModelProducer()
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalTime::class)
+@OptIn(ExperimentalTime::class)
 @Composable
 fun TrackTrainingScreen(
     trainingViewModel: TrainingViewModel,

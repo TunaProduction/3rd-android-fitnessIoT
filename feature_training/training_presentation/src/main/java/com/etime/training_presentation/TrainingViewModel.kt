@@ -388,26 +388,7 @@ class TrainingViewModel @Inject constructor(
 
 
         saveTrainingToFile(context, training, "training.json")
-       /* val path = "/json/training.json"
-        try {
-            createFile()?.let {
-                it.printWriter().use {
-                    val gson = Gson()
-                    val jsonString = gson.toJson(training)
-                    it.write(jsonString)
-                }
-            }
-            /*PrintWriter(FileWriter(path)).use {
-                val gson = Gson()
-                val jsonString = gson.toJson(training)
-                it.write(jsonString)
-            }*/
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }*/
     }
-
-
 
     fun saveTrainingToFile(context: Context, training: FinishedTrainingData, fileName: String) {
         val gson = Gson()
