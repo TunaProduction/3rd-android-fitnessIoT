@@ -70,6 +70,11 @@ dependencies {
     debugImplementation(Debug.composeToolingUI)
     debugImplementation(Debug.composeUIManifestTest)
 
+    implementation(Retrofit.okHttp)
+    implementation(Retrofit.retrofit)
+    implementation(Retrofit.okHttpLoggingInterceptor)
+    implementation(Retrofit.moshiConverter)
+
     //POLAR TOOLS
     implementation(Polar.sdk)
     implementation(RxJava.java)

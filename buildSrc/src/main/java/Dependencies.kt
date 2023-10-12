@@ -45,6 +45,8 @@ object Versions{
     const val rxJavaAndroid = "3.0.2"
     const val chartsVersion = "1.12.0"
     const val gsonVersion = "2.10.1"
+    const val retrofitVersion = "2.9.0"
+    const val okHttpVersion = "4.11.0"
 }
 
 object Compose{
@@ -122,6 +124,19 @@ object Charts {
     const val views = "com.patrykandpatrick.vico:views:${Versions.chartsVersion}"
 }
 
+object Retrofit {
+    const val retrofit = "com.squareup.retrofit2:retrofit:${Versions.retrofitVersion}"
+    const val moshiConverter = "com.squareup.retrofit2:converter-moshi:${Versions.retrofitVersion}"
+
+    const val okHttp = "com.squareup.okhttp3:okhttp:${Versions.okHttpVersion}"
+    const val okHttpLoggingInterceptor = "com.squareup.okhttp3:logging-interceptor:${Versions.okHttpVersion}"
+}
+
 object Gson {
     const val gson = "com.google.code.gson:gson:${Versions.gsonVersion}"
+}
+
+object Moshi {
+    private const val version = "1.13.0"
+    const val moshiCodegen = "kapt 'com.squareup.moshi:moshi-kotlin-codegen:$version'"
 }

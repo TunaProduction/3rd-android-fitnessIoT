@@ -6,6 +6,7 @@ import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.etime.training_presentation.remote.ThirdTimeApi
 import com.etime.training_presentation.trackTraining.TrainingStatus
 import com.etime.training_presentation.util.detectFall
 import com.etime.training_presentation.util.getDeltaLinearAcceleration
@@ -53,7 +54,8 @@ import kotlin.time.ExperimentalTime
 @HiltViewModel
 @ExperimentalTime
 class TrainingViewModel @Inject constructor(
-    @ApplicationContext context: Context
+    @ApplicationContext context: Context,
+    private val network: ThirdTimeApi
 ) : ViewModel(){
 
     companion object {
@@ -127,6 +129,9 @@ class TrainingViewModel @Inject constructor(
 
     private val _accelerationTrack = MutableStateFlow<MutableList<Double>>(mutableListOf())
     var accelerationTrackData = listOf<Double>()
+
+    private val _completeTraining = MutableStateFlow<Boolean>(false)
+    val completeTraining: StateFlow<Boolean> get() = _completeTraining
 
     var totalSeconds = 0
 
@@ -386,8 +391,10 @@ class TrainingViewModel @Inject constructor(
             _timer.value
         )
 
-
-        saveTrainingToFile(context, training, "training.json")
+        viewModelScope.launch {
+            sendTraining(training)
+        }
+        //saveTrainingToFile(context, training, "training.json")
     }
 
     fun saveTrainingToFile(context: Context, training: FinishedTrainingData, fileName: String) {
@@ -408,6 +415,40 @@ class TrainingViewModel @Inject constructor(
         accDisposable?.dispose()
         hrDisposable?.dispose()
         sdkModeDisposable?.dispose()
+    }
+
+
+    suspend fun sendTraining(
+        query: FinishedTrainingData
+    ): Result<String> {
+        return try {
+            val sendTraining = network.searchFood(query)
+            Result.success(sendTraining).also { _completeTraining.value = true }
+
+        } catch(e: Exception) {
+            e.printStackTrace()
+            Result.failure<String>(e).also { _completeTraining.value = false }
+        }
+
+        /* return try {
+            val searchDto = api.
+            Result.success(
+                searchDto.products
+                    .filter {
+                        val calculatedCalories =
+                            it.nutriments.carbohydrates100g * 4f +
+                                    it.nutriments.proteins100g * 4f +
+                                    it.nutriments.fat100g * 9f
+                        val lowerBound = calculatedCalories * 0.99f
+                        val upperBound = calculatedCalories * 1.01f
+                        it.nutriments.energyKcal100g in (lowerBound..upperBound)
+                    }
+                    .mapNotNull { it.toTrackableFood() }
+            )
+        } catch(e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }*/
     }
 
 }
