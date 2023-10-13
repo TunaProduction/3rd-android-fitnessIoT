@@ -3,6 +3,9 @@ package com.etime.training_presentation
 import android.content.Context
 import android.os.Build
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -47,6 +50,9 @@ import java.io.FileWriter
 import java.io.IOException
 import java.io.PrintWriter
 import java.nio.charset.Charset
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.time.ExperimentalTime
@@ -133,6 +139,8 @@ class TrainingViewModel @Inject constructor(
     private val _completeTraining = MutableStateFlow<Boolean>(false)
     val completeTraining: StateFlow<Boolean> get() = _completeTraining
 
+    val timeWithHeartRate: MutableList<TimeWithHeartRate> = mutableListOf()
+
     var totalSeconds = 0
 
     private val api: PolarBleApi by lazy {
@@ -217,8 +225,16 @@ class TrainingViewModel @Inject constructor(
         createTrainingFile(context)
     }
 
+    fun formatSeconds(seconds: Int): String {
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        val secs = seconds % 60
+        return String.format("%02d:%02d:%02d", hours, minutes, secs)
+    }
+
     fun trackStreamTraining(deviceId: String) {
         val ecgCreatedData = mutableListOf<FloatEntry>()
+        val handler = Handler(Looper.getMainLooper())
 
         _onGoing.value = true
         hrDisposable = api.startHrStreaming(deviceId)
@@ -229,13 +245,17 @@ class TrainingViewModel @Inject constructor(
                         for (sample in hrData.samples) {
                             _hrData.value = sample
                             _heartTrack.value.add(sample)
-
                             ecgCreatedData.add(entryOf(totalSeconds.toFloat(), sample.hr))
                             _hrChartEntry.tryEmit(ecgCreatedData)
                             Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
+
+                            handler.postDelayed({
+                                timeWithHeartRate.add(TimeWithHeartRate(
+                                    time = formatSeconds(totalSeconds), // Your logic for getting the timestamp here
+                                    hr = sample.hr.toString()
+                                ))
+                            }, 3000)
                         }
-
-
                     }
                 },
                 { error: Throwable ->
@@ -383,18 +403,42 @@ class TrainingViewModel @Inject constructor(
         val avgAcceleration = accelerationTrackData.average()
 
         val training = FinishedTrainingData(
+            getDeviceId(context)+"${Build.BRAND}-${Build.MODEL}",
+            getTimeStamp(),
             avgHr.toString(),
             avgAcceleration.toString(),
             _falls.value,
             _steps.value,
             _movementTimer.value,
-            _timer.value
+            _timer.value,
+            timeWithHeartRate
         )
 
         viewModelScope.launch {
             sendTraining(training)
         }
         //saveTrainingToFile(context, training, "training.json")
+    }
+
+    private fun getTimeStamp(): String{
+
+        val timestamp: Long = System.currentTimeMillis()
+
+        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = timestamp
+
+        val strDate = formatter.format(calendar.time)
+
+        return strDate
+    }
+
+    private fun getDeviceId(context: Context): String {
+        return Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ANDROID_ID
+        )
     }
 
     fun saveTrainingToFile(context: Context, training: FinishedTrainingData, fileName: String) {
@@ -454,10 +498,18 @@ class TrainingViewModel @Inject constructor(
 }
 
 data class FinishedTrainingData (
+    val folderName: String,
+    val fileName: String,
     val avgHr: String,
     val avgAcceleration: String,
     val falls: Int,
     val steps: Int,
     val motionTime: String,
-    val totalTime: String
+    val totalTime: String,
+    val timerWithHR: List<TimeWithHeartRate>
+)
+
+data class TimeWithHeartRate(
+    val time: String,
+    val hr: String
 )
