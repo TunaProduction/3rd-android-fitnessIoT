@@ -5,6 +5,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.eTime.a3rd_android_fitnesslot.ui.theme._3rdandroidfitnessloTTheme
 import com.etime.core_ui.R
 import com.etime.core_ui.components.TTCircleIcon
+import com.etime.core_ui.components.TTProgressBar
 import com.etime.core_ui.components.TTTrainingCell
 
 @Preview(showBackground = true)
@@ -16,8 +17,6 @@ fun GreetingPreview() {
             value = "9.0 m",
         )*/
 
-        TTCircleIcon(
-            iconId = R.drawable.ic_footbal
-        )
+        TTProgressBar()
     }
 }

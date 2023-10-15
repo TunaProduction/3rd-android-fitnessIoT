@@ -26,10 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import com.etime.core_ui.LocalSpacing
 import com.etime.core_ui.R
 import com.etime.core_ui.components.TTButton
+import com.etime.core_ui.components.TTProgressBar
 import com.etime.core_ui.components.TTTrainingCell
 import com.etime.training_presentation.TrainingViewModel
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
@@ -48,9 +50,11 @@ fun TrackTrainingScreen(
     trainingViewModel: TrainingViewModel,
     trigger: Boolean,
     backNavigation: () -> Unit,
+    finishedNavigation: () -> Unit = { }
 ) {
 
     val context = LocalContext.current
+    val view = LocalView.current
 
     val count by rememberUpdatedState(trigger)
     val deviceId = trainingViewModel.connectedDeviceId.collectAsState()
@@ -65,13 +69,15 @@ fun TrackTrainingScreen(
     val trainingStatus = trainingViewModel.trainingStatus.collectAsState()
     val hrChartData = trainingViewModel.hrChartEntry.collectAsState()
     val finishedTraining = trainingViewModel.completeTraining.collectAsState()
+    val loading = trainingViewModel.loading.collectAsState()
     chartEntryModelProducer.setEntries(hrChartData.value)
 
     DisposableEffect(key1 = deviceId.value, effect = {
         trainingViewModel.trackStreamTraining(deviceId.value)
+        view.keepScreenOn = true
 
         onDispose {
-            // Add cleanup code here if needed
+            view.keepScreenOn = false
         }
     })
 
@@ -80,13 +86,6 @@ fun TrackTrainingScreen(
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight()
-            .background(
-                if(finishedTraining.value){
-                    Color.Blue
-                }else{
-                    Color.White
-                }
-            )
     ) {
         TrackTrainingContent(trainingViewModel)
 
@@ -111,6 +110,13 @@ fun TrackTrainingScreen(
         )
     }
 
+    if(loading.value) {
+        TTProgressBar()
+    }
+
+    if (finishedTraining.value) {
+        backNavigation()
+    }
 }
 
 @Composable

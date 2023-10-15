@@ -58,7 +58,9 @@ fun ThirdTimeNavigation() {
                 trainingViewModel = trainingViewModel,
                 trigger = true,
                 backNavigation = {
-                    navController.popBackStack()
+                    navController.navigate(Route.TRAINING) {
+                        popUpTo(Route.TRAINING)
+                    }
                 }
             )
         }

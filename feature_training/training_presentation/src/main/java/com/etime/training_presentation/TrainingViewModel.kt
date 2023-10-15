@@ -141,6 +141,9 @@ class TrainingViewModel @Inject constructor(
 
     val timeWithHeartRate: MutableList<TimeWithHeartRate> = mutableListOf()
 
+    private val _loading = MutableStateFlow(false)
+    val loading = _loading.asStateFlow()
+
     var totalSeconds = 0
 
     private val api: PolarBleApi by lazy {
@@ -186,6 +189,23 @@ class TrainingViewModel @Inject constructor(
                     val minutes = (totalSeconds % 3600) / 60
                     val seconds = totalSeconds % 60
                     _timer.value = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                }
+            }
+        }
+    }
+
+    fun addHrHistorial()
+    {
+        viewModelScope.launch {
+            while (isActive) {
+                delay(3000) // delay for 1 second
+                if(_onGoing.value){
+                    _hrData.value?.let {
+                        timeWithHeartRate.add(TimeWithHeartRate(
+                            time = formatSeconds(totalSeconds), // Your logic for getting the timestamp here
+                            hr = it.hr.toString()
+                        ))
+                    }
                 }
             }
         }
@@ -249,12 +269,6 @@ class TrainingViewModel @Inject constructor(
                             _hrChartEntry.tryEmit(ecgCreatedData)
                             Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
 
-                            handler.postDelayed({
-                                timeWithHeartRate.add(TimeWithHeartRate(
-                                    time = formatSeconds(totalSeconds), // Your logic for getting the timestamp here
-                                    hr = sample.hr.toString()
-                                ))
-                            }, 3000)
                         }
                     }
                 },
@@ -302,6 +316,7 @@ class TrainingViewModel @Inject constructor(
 
         startStopwatch()
         startMovementTimer()
+        addHrHistorial()
 
     }
 
@@ -414,6 +429,7 @@ class TrainingViewModel @Inject constructor(
             timeWithHeartRate
         )
 
+        _loading.value = true
         viewModelScope.launch {
             sendTraining(training)
         }
@@ -467,11 +483,17 @@ class TrainingViewModel @Inject constructor(
     ): Result<String> {
         return try {
             val sendTraining = network.searchFood(query)
-            Result.success(sendTraining).also { _completeTraining.value = true }
+            Result.success(sendTraining).also {
+                _loading.value = false
+                _completeTraining.value = true
+            }
 
         } catch(e: Exception) {
             e.printStackTrace()
-            Result.failure<String>(e).also { _completeTraining.value = false }
+            Result.failure<String>(e).also {
+                _loading.value = false
+                _completeTraining.value = false
+            }
         }
 
         /* return try {
