@@ -2,17 +2,20 @@ package com.etime.training_presentation
 
 import android.content.Context
 import android.os.Build
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.etime.training_presentation.data.FinishedTrainingData
+import com.etime.training_presentation.data.TimeWithHeartRate
 import com.etime.training_presentation.remote.ThirdTimeApi
 import com.etime.training_presentation.trackTraining.TrainingStatus
 import com.etime.training_presentation.util.detectFall
 import com.etime.training_presentation.util.getDeltaLinearAcceleration
+import com.etime.training_presentation.util.getDeviceId
+import com.etime.training_presentation.util.getTimeStamp
 import com.etime.training_presentation.util.getWalkedDistance
 import com.etime.training_presentation.util.isHeavyMovement
 import com.google.gson.Gson
@@ -27,14 +30,11 @@ import com.polar.sdk.api.model.PolarAccelerometerData
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarEcgData
 import com.polar.sdk.api.model.PolarHrData
-import com.polar.sdk.api.model.PolarPpgData
 import com.polar.sdk.api.model.PolarSensorSetting
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,13 +43,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
-import org.json.JSONException
-import org.json.JSONObject
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
 import java.io.PrintWriter
-import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -201,10 +198,12 @@ class TrainingViewModel @Inject constructor(
                 delay(3000) // delay for 1 second
                 if(_onGoing.value){
                     _hrData.value?.let {
-                        timeWithHeartRate.add(TimeWithHeartRate(
+                        timeWithHeartRate.add(
+                            TimeWithHeartRate(
                             time = formatSeconds(totalSeconds), // Your logic for getting the timestamp here
                             hr = it.hr.toString()
-                        ))
+                        )
+                        )
                     }
                 }
             }
@@ -436,27 +435,6 @@ class TrainingViewModel @Inject constructor(
         //saveTrainingToFile(context, training, "training.json")
     }
 
-    private fun getTimeStamp(): String{
-
-        val timestamp: Long = System.currentTimeMillis()
-
-        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = timestamp
-
-        val strDate = formatter.format(calendar.time)
-
-        return strDate
-    }
-
-    private fun getDeviceId(context: Context): String {
-        return Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ANDROID_ID
-        )
-    }
-
     fun saveTrainingToFile(context: Context, training: FinishedTrainingData, fileName: String) {
         val gson = Gson()
         val jsonString = gson.toJson(training)
@@ -482,7 +460,7 @@ class TrainingViewModel @Inject constructor(
         query: FinishedTrainingData
     ): Result<String> {
         return try {
-            val sendTraining = network.searchFood(query)
+            val sendTraining = network.sendTraining(query)
             Result.success(sendTraining).also {
                 _loading.value = false
                 _completeTraining.value = true
@@ -495,43 +473,6 @@ class TrainingViewModel @Inject constructor(
                 _completeTraining.value = false
             }
         }
-
-        /* return try {
-            val searchDto = api.
-            Result.success(
-                searchDto.products
-                    .filter {
-                        val calculatedCalories =
-                            it.nutriments.carbohydrates100g * 4f +
-                                    it.nutriments.proteins100g * 4f +
-                                    it.nutriments.fat100g * 9f
-                        val lowerBound = calculatedCalories * 0.99f
-                        val upperBound = calculatedCalories * 1.01f
-                        it.nutriments.energyKcal100g in (lowerBound..upperBound)
-                    }
-                    .mapNotNull { it.toTrackableFood() }
-            )
-        } catch(e: Exception) {
-            e.printStackTrace()
-            Result.failure(e)
-        }*/
     }
 
 }
-
-data class FinishedTrainingData (
-    val folderName: String,
-    val fileName: String,
-    val avgHr: String,
-    val avgAcceleration: String,
-    val falls: Int,
-    val steps: Int,
-    val motionTime: String,
-    val totalTime: String,
-    val timerWithHR: List<TimeWithHeartRate>
-)
-
-data class TimeWithHeartRate(
-    val time: String,
-    val hr: String
-)

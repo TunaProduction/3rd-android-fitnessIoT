@@ -35,6 +35,7 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun TrainingScreen(
     trainingViewModel: TrainingViewModel = hiltViewModel(),
+    onHistorialNavigation: () -> Unit,
     onNextClick: () -> Unit,
     onRequestConnectionClick: () -> Unit
 ){
@@ -68,10 +69,10 @@ fun TrainingScreen(
             }
 
             Text(
-                text = "View last training",
+                text = "View historial",
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.clickable {
-
+                    onHistorialNavigation()
                 }
             )
 

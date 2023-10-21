@@ -5,4 +5,5 @@ object Route {
     const val TRAINING = "training"
     const val TRACK_TRAINING = "track_training"
     const val CONNECT_DEVICE = "connect_device"
+    const val HISTORIAL_TRAINING = "historial_training"
 }

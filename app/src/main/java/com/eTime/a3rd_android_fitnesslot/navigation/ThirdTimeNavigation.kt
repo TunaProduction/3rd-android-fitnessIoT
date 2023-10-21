@@ -3,7 +3,6 @@ package com.eTime.a3rd_android_fitnesslot.navigation
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavOptions
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -12,6 +11,7 @@ import com.etime.training_presentation.ConnectDeviceScreen
 import com.etime.training_presentation.trackTraining.TrackTrainingScreen
 import com.etime.training_presentation.TrainingScreen
 import com.etime.training_presentation.TrainingViewModel
+import com.etime.training_presentation.trainingHistorial.TrainingHistorialScreen
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
@@ -35,6 +35,9 @@ fun ThirdTimeNavigation() {
         composable(Route.TRAINING){
             TrainingScreen(
                 trainingViewModel = trainingViewModel,
+                onHistorialNavigation = {
+                    navController.navigate(Route.HISTORIAL_TRAINING)
+                },
                 onNextClick = {
                     navController.navigate(Route.TRACK_TRAINING)
                 },
@@ -63,6 +66,14 @@ fun ThirdTimeNavigation() {
                     }
                 }
             )
+        }
+
+        composable(Route.HISTORIAL_TRAINING) {
+            TrainingHistorialScreen {
+                navController.navigate(Route.TRAINING) {
+                    popUpTo(Route.TRAINING)
+                }
+            }
         }
     }
 }
