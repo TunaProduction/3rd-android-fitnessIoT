@@ -58,13 +58,16 @@ fun TrainingHistorialScreen(
     val trainings = trainingHistorialViewModel.trainings.collectAsState()
     val loading = trainingHistorialViewModel.loading.collectAsState()
 
-    LazyColumn() {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
 
         item {
             Spacer(modifier = Modifier.height(LocalSpacing.current.spaceMedium))
             TTButton(
                 text = "Back",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(0.9f)
             ){
                 backNavigation()
             }
@@ -119,7 +122,8 @@ private fun PastTraining(
 @Composable
 fun TrainingDialog(
     training: FinishedTrainingData,
-    onClose: () -> Unit = { }) {
+    onClose: () -> Unit = { }
+) {
     Box(
         modifier = Modifier
             .background(Color.Black.copy(alpha = 0.4f))
@@ -163,6 +167,27 @@ fun TrainingDialog(
             TTTrainingRow(
                 name = stringResource(id = R.string.training_falls_label),
                 value = training.falls.toString(),
+                textStyle = MaterialTheme.typography.titleMedium,
+                valueTextStyle = MaterialTheme.typography.labelLarge
+            )
+
+            TTTrainingRow(
+                name = stringResource(id = R.string.training_steps_label),
+                value = training.steps.toString(),
+                textStyle = MaterialTheme.typography.titleMedium,
+                valueTextStyle = MaterialTheme.typography.labelLarge
+            )
+
+            TTTrainingRow(
+                name = stringResource(id = R.string.training_motion_timer_label),
+                value = training.motionTime,
+                textStyle = MaterialTheme.typography.titleMedium,
+                valueTextStyle = MaterialTheme.typography.labelLarge
+            )
+
+            TTTrainingRow(
+                name = stringResource(id = R.string.training_timer_label),
+                value = training.totalTime,
                 textStyle = MaterialTheme.typography.titleMedium,
                 valueTextStyle = MaterialTheme.typography.labelLarge
             )
