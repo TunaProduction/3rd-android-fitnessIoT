@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.sp
 fun TTTextField(
     value: String,
     onValueChange: (String) -> Unit,
+    placeHolder: String? = null,
     icon : Int? = null
 ){
     BasicTextField(
@@ -55,7 +57,32 @@ fun TTTextField(
                     Spacer(modifier = Modifier.width(width = 8.dp))
                 }
 
-                innerTextField()
+                if(placeHolder.isNullOrEmpty()){
+                    innerTextField()
+                } else {
+                    if(value.isNotEmpty()) {
+                        innerTextField()
+                    } else {
+                        Text(
+                            text = placeHolder,
+                            color = Color.Gray
+                        )
+                    }
+                }
+               /* placeHolder?.let {
+                    if(it.isEmpty()) {
+                        if (value.isEmpty()){
+                            Text(text = it)
+                        } else {
+                            innerTextField()
+                        }
+                    } else {
+                        innerTextField()
+                    }
+                }?:run {
+                    innerTextField()
+                }*/
+
             }
         }
     )

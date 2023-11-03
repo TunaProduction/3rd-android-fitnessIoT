@@ -7,9 +7,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.etime.auth_presentation.login.LoginScreen
-import com.etime.training_presentation.TrackTrainingScreen
+import com.etime.training_presentation.ConnectDeviceScreen
+import com.etime.training_presentation.trackTraining.TrackTrainingScreen
 import com.etime.training_presentation.TrainingScreen
 import com.etime.training_presentation.TrainingViewModel
+import com.etime.training_presentation.profile.ProfileScreen
+import com.etime.training_presentation.trainingHistorial.TrainingHistorialScreen
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
@@ -30,11 +33,37 @@ fun ThirdTimeNavigation() {
             )
         }
 
+        composable(Route.PROFILE) {
+            ProfileScreen(
+                onNextClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable(Route.TRAINING){
             TrainingScreen(
                 trainingViewModel = trainingViewModel,
+                onHistorialNavigation = {
+                    navController.navigate(Route.HISTORIAL_TRAINING)
+                },
                 onNextClick = {
                     navController.navigate(Route.TRACK_TRAINING)
+                },
+                onRequestConnectionClick = {
+                    navController.navigate(Route.CONNECT_DEVICE)
+                },
+                onProfileClick = {
+                    navController.navigate(Route.PROFILE)
+                }
+            )
+        }
+
+        composable(Route.CONNECT_DEVICE){
+            ConnectDeviceScreen(
+                trainingViewModel = trainingViewModel,
+                onConnectedDevice = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -42,10 +71,19 @@ fun ThirdTimeNavigation() {
         composable(Route.TRACK_TRAINING){
             TrackTrainingScreen(
                 trainingViewModel = trainingViewModel,
+                trigger = true,
                 backNavigation = {
                     navController.popBackStack()
                 }
             )
+        }
+
+        composable(Route.HISTORIAL_TRAINING) {
+            TrainingHistorialScreen {
+                navController.navigate(Route.TRAINING) {
+                    popUpTo(Route.TRAINING)
+                }
+            }
         }
     }
 }

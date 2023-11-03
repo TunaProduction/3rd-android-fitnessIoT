@@ -1,15 +1,25 @@
 package com.etime.training_presentation
 
 import android.content.Context
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import android.util.Log
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.etime.training_presentation.data.FinishedTrainingData
+import com.etime.training_presentation.data.TimeWithHeartRate
+import com.etime.training_presentation.local.TrainingDao
+import com.etime.training_presentation.remote.ThirdTimeApi
+import com.etime.training_presentation.trackTraining.TrainingStatus
 import com.etime.training_presentation.util.detectFall
 import com.etime.training_presentation.util.getDeltaLinearAcceleration
+import com.etime.training_presentation.util.getDeviceId
+import com.etime.training_presentation.util.getTimeStamp
 import com.etime.training_presentation.util.getWalkedDistance
 import com.etime.training_presentation.util.isHeavyMovement
-import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
+import com.google.gson.Gson
 import com.patrykandpatrick.vico.core.entry.FloatEntry
 import com.patrykandpatrick.vico.core.entry.entryOf
 import com.polar.sdk.api.PolarBleApi
@@ -20,67 +30,61 @@ import com.polar.sdk.api.errors.PolarNotificationNotEnabled
 import com.polar.sdk.api.model.PolarAccelerometerData
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarEcgData
-import com.polar.sdk.api.model.PolarExerciseEntry
 import com.polar.sdk.api.model.PolarHrData
 import com.polar.sdk.api.model.PolarSensorSetting
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
-import io.reactivex.rxjava3.core.BackpressureStrategy
-import io.reactivex.rxjava3.core.Flowable
-import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlin.math.sqrt
-import kotlin.math.abs
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.cancel
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.collectIndexed
-import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onEmpty
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.future.future
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
-import java.util.Timer
+import java.io.File
+import java.io.FileWriter
+import java.io.IOException
+import java.io.PrintWriter
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
-import kotlin.concurrent.fixedRateTimer
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 @ExperimentalTime
 class TrainingViewModel @Inject constructor(
-    @ApplicationContext context: Context
+    @ApplicationContext context: Context,
+    private val dao: TrainingDao,
+    private val network: ThirdTimeApi
 ) : ViewModel(){
-    // ATTENTION! Replace with the device ID from your device.
-    //private var deviceId = "C4E55B27"
 
-    private var sdkModeEnabledStatus = false
-    private var bluetoothEnabled = false
+    companion object {
+        private const val TAG = "TrainingViewModel"
+        private const val API_LOGGER_TAG = "API LOGGER"
+        private const val PERMISSION_REQUEST_CODE = 1
+    }
 
     private var accDisposable: Disposable? = null
+    private var hrDisposable: Disposable? = null
+    private var ppgDisposable: Disposable? = null
     private var ecgDisposable: Disposable? = null
     private var sdkModeDisposable: Disposable? = null
 
-    private var exerciseEntries: MutableList<PolarExerciseEntry> = mutableListOf()
+    private var sdkModeEnabledStatus = false
+    private var bluetoothEnabled = false
 
     private val _polarDevicesList = MutableStateFlow<List<PolarDeviceInfo>>(listOf())
     val polarDevicesList = _polarDevicesList.asStateFlow()
@@ -109,19 +113,51 @@ class TrainingViewModel @Inject constructor(
     private val _falls = MutableStateFlow<Int>(0)
     val falls = _falls.asStateFlow()
 
-    private val _ecgData = MutableStateFlow<List<PolarEcgData.PolarEcgDataSample>>(listOf())
-    val ecgData = _ecgData.asStateFlow()
+    private val _onGoing = MutableStateFlow<Boolean>(false)
+    val onGoing = _onGoing.asStateFlow()
 
-    private val _ecgEntry = MutableStateFlow<List<FloatEntry>>(listOf())
-    val ecgEntry = _ecgEntry.asStateFlow()
+    private val _timer = MutableStateFlow<String>("0")
+    val timer: StateFlow<String> get() = _timer
 
-    val chartEntryModelProducer: ChartEntryModelProducer = ChartEntryModelProducer()
+    private val _hrActivated = MutableStateFlow<Boolean>(false)
+    val hrActivated = _hrActivated.asStateFlow()
 
-    companion object {
-        private const val TAG = "MainActivity"
-        private const val API_LOGGER_TAG = "API LOGGER"
-        private const val PERMISSION_REQUEST_CODE = 1
-    }
+    private val _trainingStatus = MutableStateFlow<TrainingStatus>(TrainingStatus.OnGoing)
+    val trainingStatus = _trainingStatus.asStateFlow()
+
+    private val _movementTimer = MutableStateFlow<String>("0")
+    val movementTimer: StateFlow<String> get() = _movementTimer
+
+    private val _isMoving = MutableStateFlow<Boolean>(false)
+    val isMoving: StateFlow<Boolean> get() = _isMoving
+
+    private val _hrChartData = MutableStateFlow<List<PolarEcgData.PolarEcgDataSample>>(listOf())
+    val hrChartData = _hrChartData.asStateFlow()
+
+    private val _hrChartEntry = MutableStateFlow<List<FloatEntry>>(listOf())
+    val hrChartEntry = _hrChartEntry.asStateFlow()
+
+    private val _heartTrack = MutableStateFlow<MutableList<PolarHrData.PolarHrSample>>(mutableListOf())
+    var heartTrackData = listOf<PolarHrData.PolarHrSample>()
+
+    private val _accelerationTrack = MutableStateFlow<MutableList<Double>>(mutableListOf())
+    var accelerationTrackData = listOf<Double>()
+
+    private val _completeTraining = MutableStateFlow<Boolean>(false)
+    val completeTraining: StateFlow<Boolean> get() = _completeTraining
+
+    val timeWithHeartRate: MutableList<TimeWithHeartRate> = mutableListOf()
+
+    private val _loading = MutableStateFlow(false)
+    val loading = _loading.asStateFlow()
+
+    var totalSeconds = 0
+
+    private var job = Job()
+        get() {
+            if (field.isCancelled) field = Job()
+            return field
+        }
 
     private val api: PolarBleApi by lazy {
         // Notice all features are enabled
@@ -140,14 +176,209 @@ class TrainingViewModel @Inject constructor(
         )
     }
 
-
+    init {
+        startPolar()
+    }
 
     override fun onCleared() {
         super.onCleared()
         api.disconnectFromDevice(_connectedDeviceId.value)
         api.shutDown()
         disposeAllStreams()
-        scope.cancel()
+    }
+
+    fun changeTrainingStatus(status: TrainingStatus) {
+        _trainingStatus.value = status
+    }
+
+    fun startStopwatch()
+    {
+        viewModelScope.launch(job) {
+            while (isActive) {
+                delay(1000) // delay for 1 second
+                if(_onGoing.value){
+                    totalSeconds++
+                    val hours = totalSeconds / 3600
+                    val minutes = (totalSeconds % 3600) / 60
+                    val seconds = totalSeconds % 60
+                    _timer.value = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                }
+            }
+        }
+    }
+
+    fun addHrHistorial()
+    {
+        viewModelScope.launch(job) {
+            while (isActive) {
+                delay(3000) // delay for 1 second
+                if(_onGoing.value){
+                    _hrData.value?.let {
+                        timeWithHeartRate.add(
+                            TimeWithHeartRate(
+                            time = formatSeconds(totalSeconds), // Your logic for getting the timestamp here
+                            hr = it.hr.toString()
+                        )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun startMovementTimer() {
+        var totalSeconds = 0
+        viewModelScope.launch(job) {
+            while (isActive) {
+                delay(1000) // delay for 1 second
+                if(_isMoving.value && _onGoing.value){
+                    totalSeconds++
+                    val hours = totalSeconds / 3600
+                    val minutes = (totalSeconds % 3600) / 60
+                    val seconds = totalSeconds % 60
+                    _movementTimer .value = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                }
+            }
+        }
+    }
+
+    fun pauseStopWatch() {
+        _onGoing.value = false
+        changeTrainingStatus(TrainingStatus.Paused)
+    }
+
+    fun restartStopWatch() {
+        _onGoing.value = true
+        changeTrainingStatus(TrainingStatus.OnGoing)
+    }
+
+    fun finishTraining(context: Context) {
+        _onGoing.value = false
+        heartTrackData = _heartTrack.value
+        accelerationTrackData = _accelerationTrack.value
+        changeTrainingStatus(TrainingStatus.Finished)
+        createTrainingFile(context)
+    }
+
+    fun formatSeconds(seconds: Int): String {
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        val secs = seconds % 60
+        return String.format("%02d:%02d:%02d", hours, minutes, secs)
+    }
+
+    fun trackStreamTraining(deviceId: String) {
+        val ecgCreatedData = mutableListOf<FloatEntry>()
+        val handler = Handler(Looper.getMainLooper())
+        job.start()
+        _onGoing.value = true
+        hrDisposable = api.startHrStreaming(deviceId)
+            .observeOn(Schedulers.io())
+            .subscribe(
+                { hrData: PolarHrData ->
+                    if(_onGoing.value){
+                        for (sample in hrData.samples) {
+                            _hrData.value = sample
+                            _heartTrack.value.add(sample)
+                            ecgCreatedData.add(entryOf(totalSeconds.toFloat(), sample.hr))
+                            _hrChartEntry.tryEmit(ecgCreatedData)
+                            Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
+
+                        }
+                    }
+                },
+                { error: Throwable ->
+                    Log.e(TAG, "HR stream failed. Reason $error")
+                },
+                { Log.d(TAG, "HR stream complete") }
+            )
+
+        accDisposable = api.startAccStreaming(
+            deviceId,
+            PolarSensorSetting(getDefaultSettings())
+        )
+            .observeOn(Schedulers.io())
+            .subscribe(
+                { polarAccelerometerData: PolarAccelerometerData ->
+                    if(_onGoing.value) {
+                        Log.d(TAG, "ACC RUNNING")
+                        _acceleration.value = getDeltaLinearAcceleration(
+                            polarAccelerometerData.samples,
+                            0.000000
+                        ).first
+
+                        _accelerationTrack.value.add(_acceleration.value)
+
+                        val walk = getWalkedDistance(polarAccelerometerData.samples)
+                        _distance.value = walk.first
+                        _steps.value = walk.second
+
+                        _isMoving.value = isHeavyMovement(polarAccelerometerData)
+
+                        if (detectFall(polarAccelerometerData))
+                            _falls.value++
+                    }
+                },
+                { error: Throwable ->
+                    //toggleButtonUp(accButton, R.string.start_acc_stream)
+                    Log.e(TAG, "ACC stream failed. Reason $error")
+                },
+                {
+                    //showToast("ACC stream complete")
+                    Log.d(TAG, "ACC stream complete")
+                }
+            )
+
+        startStopwatch()
+        startMovementTimer()
+        addHrHistorial()
+
+    }
+
+    fun getDefaultSettings(): MutableMap<PolarSensorSetting.SettingType, Int> {
+        val defaultSettings: MutableMap<PolarSensorSetting.SettingType, Int> = mutableMapOf()
+        defaultSettings[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
+        defaultSettings[PolarSensorSetting.SettingType.RESOLUTION] = 16
+        defaultSettings[PolarSensorSetting.SettingType.RANGE] = 8
+        defaultSettings[PolarSensorSetting.SettingType.CHANNELS] = 3
+
+        return defaultSettings
+    }
+
+    fun searchDevice() {
+        val foundDevices = mutableListOf<PolarDeviceInfo>()
+
+        viewModelScope.launch(job) {
+            api.searchForDevice()
+                .asFlow()
+                .onEach { polarDeviceInfo ->
+                    foundDevices.add(polarDeviceInfo)
+                    Log.d("may-connection", polarDeviceInfo.deviceId+" "+polarDeviceInfo.name+" "+polarDeviceInfo.isConnectable)
+                    _polarDevicesList.tryEmit(foundDevices)
+                }
+                .collect{}
+        }
+    }
+
+    fun connectDevice(founDevice: PolarDeviceInfo){
+        try {
+            if (_isConnected.value) {
+                api.disconnectFromDevice(founDevice.deviceId)
+            } else {
+                api.connectToDevice(founDevice.deviceId)
+            }
+        } catch (polarInvalidArgument: PolarInvalidArgument) {
+            val attempt = if (_isConnected.value) {
+                "disconnect"
+            } else {
+                "connect"
+            }
+            Log.e(TAG, "Failed to $attempt. Reason $polarInvalidArgument ")
+        }
+    }
+
+    fun connectDeviceByString(deviceId: String) {
+        api.connectToDevice(deviceId)
     }
 
     fun startPolar(){
@@ -158,17 +389,22 @@ class TrainingViewModel @Inject constructor(
                 bluetoothEnabled = powered
                 if (powered) {
                     //enableAllButtons()
-                    Log.d("May-Polar","Phone Bluetooth on")
+                    Log.d(TAG,"Phone Bluetooth on")
                 } else {
                     //disableAllButtons()
-                    Log.d("May-Polar","Phone Bluetooth off")
+                    Log.d(TAG,"Phone Bluetooth off")
                 }
             }
 
             override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
                 Log.d(TAG, "CONNECTED: ${polarDeviceInfo.deviceId}")
-                _connectedDeviceId.value = polarDeviceInfo.deviceId
-                _isConnected.value = true
+                viewModelScope.launch(Dispatchers.IO) {
+                    dao.updateDeviceId(polarDeviceInfo.deviceId).also {
+                        _connectedDeviceId.value = polarDeviceInfo.deviceId
+                        _isConnected.value = true
+                    }
+                }
+
                 //val buttonText = getString(R.string.disconnect_from_device, deviceId)
                 //toggleButtonDown(connectButton, buttonText)
             }
@@ -200,420 +436,93 @@ class TrainingViewModel @Inject constructor(
         })
     }
 
-    fun connectDevice(founDevice: PolarDeviceInfo){
-        try {
-            if (_isConnected.value) {
-                api.disconnectFromDevice(founDevice.deviceId)
-            } else {
-                api.connectToDevice(founDevice.deviceId)
-            }
-        } catch (polarInvalidArgument: PolarInvalidArgument) {
-            val attempt = if (_isConnected.value) {
-                "disconnect"
-            } else {
-                "connect"
-            }
-            Log.e(TAG, "Failed to $attempt. Reason $polarInvalidArgument ")
-        }
-    }
+    private fun createTrainingFile(context: Context) {
+        val avgHr = heartTrackData.map { it.hr }.average()
+        val avgAcceleration = accelerationTrackData.average()
 
-     fun searchDevice() {
-         val foundDevices = mutableListOf<PolarDeviceInfo>()
-
-        viewModelScope.launch {
-            api.searchForDevice()
-                .asFlow()
-                .onEach { polarDeviceInfo ->
-                    foundDevices.add(polarDeviceInfo)
-                    Log.d("may-connection", polarDeviceInfo.deviceId+" "+polarDeviceInfo.name+" "+polarDeviceInfo.isConnectable)
-                    _polarDevicesList.tryEmit(foundDevices)
-                }
-                .collect{}
-        }
-    }
-
-    fun getTraining(deviceId: String) {
-
-        val ecgCreatedData = mutableListOf<FloatEntry>()
-        viewModelScope.launch {
-
-           /* try {
-                api.startAccStreaming(
-                    deviceId,
-                    PolarSensorSetting(getDefaultSettings())
+        _loading.value = true
+        viewModelScope.launch(job) {
+            dao.getProfile().collectLatest {
+                val training = FinishedTrainingData(
+                    getDeviceId(context)+"${Build.BRAND}-${Build.MODEL}",
+                    getTimeStamp(),
+                    avgHr.toString(),
+                    avgAcceleration.toString(),
+                    _falls.value,
+                    _steps.value,
+                    _movementTimer.value,
+                    _timer.value,
+                    timeWithHeartRate,
+                    it
                 )
-                    .asFlow()
-                    .collect()
-            }catch (e: Throwable){
-                Log.e("polar-error", e.message.toString()+ " causa: "+e.cause?.localizedMessage.toString())
-            }*/
-          /*  api.startAccStreaming(
-                deviceId,
-                PolarSensorSetting(getDefaultSettings())
-            )
-                .asFlow()
-                .catch {
-                    Log.e("polar-error", it.message.toString()+ " causa: "+it.cause?.message+" "+it.cause?.localizedMessage)
-                }
-                .collect()*/
 
+                sendTraining(training)
+            }
+        }
+        //saveTrainingToFile(context, training, "training.json")
+    }
 
-            api.startHrStreaming(deviceId)
-                .asFlow()
-                .collect{ hrCollectedData ->
-                    for (sample in hrCollectedData.samples) {
-                        _hrData.value = sample
+    fun saveTrainingToFile(context: Context, training: FinishedTrainingData, fileName: String) {
+        val gson = Gson()
+        val jsonString = gson.toJson(training)
 
-                        ecgCreatedData.add(entryOf(globalSeconds.toFloat(), sample.hr))
-                        _ecgEntry.tryEmit(ecgCreatedData)
-                        //Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
-                    }
-
-
-                }
-
-            /*.collect { polarAccelerometerData ->
-                for (data in polarAccelerometerData.samples) {
-                    _accData.value = data
-                }
-            }*/
-                /*.subscribe(
-                    { polarAccelerometerData: PolarAccelerometerData ->
-                        for (data in polarAccelerometerData.samples) {
-                            _accData.value = data
-                            /*Log.d(
-                                TAG,
-                                "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}"
-                            )*/
-                        }
-                    },
-                    { error: Throwable ->
-                        //toggleButtonUp(accButton, R.string.start_acc_stream)
-                        Log.e(TAG, "ACC stream failed. Reason $error")
-                    },
-                    {
-                        //showToast("ACC stream complete")
-                        Log.d(TAG, "ACC stream complete")
-                    }
-                )*/
-
-
-
-         /*   getSettings(deviceId, PolarBleApi.PolarDeviceDataType.ACC)
-                .collect {
-                    api.startAccStreaming(deviceId, it)
-                        .asFlow()
-                        .collect { polarAccelerometerData ->
-                            for (data in polarAccelerometerData.samples) {
-                                _accData.value = data
-                                Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
-                            }
-                        }
-                }*/
-
-            /*.asFlow()
-            .collect { polarAccelerometerData ->
-                for (data in polarAccelerometerData.samples) {
-                    _accData.value = data
-                    Log.d(TAG, "ACC    x: ${data.x} y: ${data.y} z: ${data.z} timeStamp: ${data.timeStamp}")
-                }
-            }*/
-
-
-
-           /* requestStreamSettings(deviceId, PolarSensorSetting(
-                settings = Pair<PolarSensorSetting.SettingType()>
-            ))*/
-
-            //api.startAccStreaming(deviceId, PolarBleApi.PolarDeviceDataType.ACC)
-           /* api.startHrStreaming(deviceId)
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                    { hrData: PolarHrData ->
-                        for (sample in hrData.samples) {
-                            Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
-                        }
-                    },
-                    { error: Throwable ->
-                        toggleButtonUp(hrButton, R.string.start_hr_stream)
-                        Log.e(TAG, "HR stream failed. Reason $error")
-                    },
-                    { Log.d(TAG, "HR stream complete") }
-                )*/
+        try {
+            val file = File(context.filesDir, fileName)
+            val printWriter = PrintWriter(FileWriter(file))
+            printWriter.print(jsonString)
+            printWriter.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
     }
 
-    fun enableSdkMode(deviceId: String) {
-        getTraining(deviceId)
-
-    /*sdkModeDisposable = api.enableSDKMode(deviceId)
-        .observeOn(AndroidSchedulers.mainThread())
-        .subscribe(
-            {
-                trackStreamTraining(deviceId)
-                getTraining(deviceId)
-            },
-            { error ->
-                val errorString = "SDK mode enable failed: $error"
-                Log.e(TAG, errorString)
-            }
-        )*/
-    }
-
-    private val _movementTimer = MutableStateFlow<String>("0")
-    val movementTimer: StateFlow<String> get() = _movementTimer
-
-    private val _isMoving = MutableStateFlow<Boolean>(false)
-    val isMoving: StateFlow<Boolean> get() = _isMoving
-
-    fun trackStreamTraining(deviceId: String) {
-
-
-
-        accDisposable = api.startAccStreaming(
-            deviceId,
-            PolarSensorSetting(getDefaultSettings())
-        )
-            .observeOn(Schedulers.io())
-            .subscribe(
-                { polarAccelerometerData: PolarAccelerometerData ->
-                    for (data in polarAccelerometerData.samples) {
-                        _accData.value = data
-                        //getLinearAcceleration(data.x.toDouble(),data.y.toDouble(),data.z.toDouble())
-                    }
-                    _acceleration.value = getDeltaLinearAcceleration(polarAccelerometerData.samples, 0.000000).first
-                    val walk = getWalkedDistance(polarAccelerometerData.samples)
-                    _distance.value = walk.first
-                    _steps.value = walk.second
-
-                    _isMoving.value = isHeavyMovement(polarAccelerometerData)
-
-                    if(detectFall(polarAccelerometerData))
-                        _falls.value++
-
-                },
-                { error: Throwable ->
-                    //toggleButtonUp(accButton, R.string.start_acc_stream)
-                    Log.e(TAG, "ACC stream failed. Reason $error")
-                },
-                {
-                    //showToast("ACC stream complete")
-                    Log.d(TAG, "ACC stream complete")
-                }
-            )
-
-      /*  ecgDisposable = api.requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ECG)
-            .toFlowable()
-            .flatMap { sensorSetting: PolarSensorSetting -> api.startEcgStreaming(deviceId, sensorSetting.maxSettings()) }
-            .observeOn(Schedulers.io())
-            .subscribe(
-                { polarEcgData: PolarEcgData ->
-                    Log.d("ECG", "ecg update")
-                    for (data in polarEcgData.samples) {
-                        val seconds = data.timeStamp / 1_000_000_000.0
-
-
-                        //ecgPlotter.sendSingleSample((data.voltage.toFloat() / 1000.0).toFloat())
-                    }
-                },
-                { error: Throwable ->
-                    Log.e(TAG, "Ecg stream failed $error")
-                    ecgDisposable = null
-                },
-                {
-                    Log.d(TAG, "Ecg stream complete")
-                }
-            )*/
-
-    /*    ecgDisposable = api.startEcgStreaming(deviceId, PolarSensorSetting(getDefaultSettings()))
-            .observeOn(Schedulers.io())
-            .subscribe(
-                { polarEcgData: PolarEcgData ->
-                    Log.d("ECG", "ecg update")
-                    for (data in polarEcgData.samples) {
-                        val seconds = data.timeStamp / 1_000_000_000.0
-
-                        ecgCreatedData.add(entryOf(seconds.toFloat(), (data.voltage.toFloat() / 1000.0).toFloat()))
-                        _ecgEntry.tryEmit(ecgCreatedData)
-                        //ecgPlotter.sendSingleSample((data.voltage.toFloat() / 1000.0).toFloat())
-                    }
-
-                },
-                { error: Throwable ->
-                    Log.e("ECG", "Ecg stream failed $error")
-                },
-                {
-                    Log.d("ECG", "Ecg stream complete")
-                }
-            )
-*/
-        /*ecgDisposable = api.requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ECG)
-            .toFlowable()
-            .flatMap { sensorSetting: PolarSensorSetting -> api.startEcgStreaming(deviceId, sensorSetting.maxSettings()) }
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(
-                { polarEcgData: PolarEcgData ->
-                    Log.d(TAG, "ecg update")
-                    _ecgData.value = polarEcgData.samples
-/*
-                    foundDevices.add(polarDeviceInfo)
-                    Log.d("may-connection", polarDeviceInfo.deviceId+" "+polarDeviceInfo.name+" "+polarDeviceInfo.isConnectable)
-                    _polarDevicesList.tryEmit(foundDevices)
-                    */
-                    for (data in polarEcgData.samples) {
-                        val seconds = data.timeStamp / 1_000_000_000.0
-
-                        ecgCreatedData.add(entryOf(seconds.toFloat(), (data.voltage.toFloat() / 1000.0).toFloat()))
-                        //ecgPlotter.sendSingleSample((data.voltage.toFloat() / 1000.0).toFloat())
-                    }
-                    _ecgEntry.tryEmit(ecgCreatedData)
-                },
-                { error: Throwable ->
-                    Log.e(TAG, "Ecg stream failed $error")
-                    ecgDisposable = null
-                },
-                {
-                    Log.d(TAG, "Ecg stream complete")
-                }
-            )*/
-    }
-
-
-
-    fun getDefaultSettings(): MutableMap<PolarSensorSetting.SettingType, Int> {
-        val defaultSettings: MutableMap<PolarSensorSetting.SettingType, Int> = mutableMapOf()
-        defaultSettings[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
-        defaultSettings[PolarSensorSetting.SettingType.RESOLUTION] = 16
-        defaultSettings[PolarSensorSetting.SettingType.RANGE] = 8
-        defaultSettings[PolarSensorSetting.SettingType.CHANNELS] = 3
-
-        return defaultSettings
-    }
-/*
-    private lateinit var timer: Timer
-    var seconds = mutableStateOf("00")
-    var minutes = mutableStateOf("00")
-    var hours = mutableStateOf("00")
-    private var duration: Duration = Duration.ZERO
-
-    fun startStopwatch() {
-        timer = fixedRateTimer(initialDelay = 1000L, period = 1000L) {
-            duration = duration.plus(1.seconds)
-
-            duration.toComponents { phours, pminutes, pseconds, _ ->
-                _pTimer.value = "$phours : $pminutes : $pseconds"
-            }
-        }
-    }*/
-
-    private val scope = CoroutineScope(Dispatchers.Main + Job())
-    private val _pTimer = MutableStateFlow<String>("0")
-    val pTimer: StateFlow<String> get() = _pTimer
-
-    private val viewModelJob = SupervisorJob()
-    private val viewModelScope = CoroutineScope(Dispatchers.Main + viewModelJob)
-
-    var elapsedTime = MutableLiveData<Duration>()
-    private var globalSeconds = 0
-
-    init {
-        startPolar()
-        startStopwatch()
-        startMovementTimer()
-        elapsedTime.value = 0.seconds
-
-    }
-
-    fun startStopwatch()
-    {
-        var totalSeconds = 0
-        viewModelScope.launch {
-            while (isActive) {
-                delay(1000) // delay for 1 second
-                globalSeconds++
-                totalSeconds++
-                val hours = totalSeconds / 3600
-                val minutes = (totalSeconds % 3600) / 60
-                val seconds = totalSeconds % 60
-                _pTimer .value = String.format("%02d:%02d:%02d", hours, minutes, seconds)
-            }
-        }
-    }
-
-
-    fun startMovementTimer() {
-        var totalSeconds = 0
-        viewModelScope.launch {
-            while (isActive) {
-                delay(1000) // delay for 1 second
-                if(_isMoving.value){
-                    totalSeconds++
-                    val hours = totalSeconds / 3600
-                    val minutes = (totalSeconds % 3600) / 60
-                    val seconds = totalSeconds % 60
-                    _movementTimer .value = String.format("%02d:%02d:%02d", hours, minutes, seconds)
-                }
-            }
-        }
-    }
-
-
-    fun stopStopwatch() {
-        viewModelScope.cancel()
-    }
-
-
-
-    fun getSettings(deviceId: String, feature: PolarBleApi.PolarDeviceDataType): Flow<PolarSensorSetting> {
-        /*return settings*/
-        var settings = PolarSensorSetting(getDefaultSettings())
-
-        return api.requestFullStreamSettings(deviceId, feature)
-            .toFlowable()
-            .asFlow()
-
-        /*return api.requestStreamSettings(deviceId, feature)
-            .toFlowable()
-            .asFlow()*/
-
-    }
-
-    /*
-    fun getSettings(deviceId: String, feature: PolarBleApi.PolarDeviceDataType): Single<PolarSensorSetting> {
-        /*return settings*/
-        var settings = PolarSensorSetting(getDefaultSettings())
-
-        return api.requestFullStreamSettings(deviceId, feature)
-
-       /* val availableSettings = api.requestStreamSettings(deviceId, feature)
-        val allSettings = api.requestFullStreamSettings(deviceId, feature)
-            .onErrorReturn { error: Throwable ->
-                Log.w(TAG, "Full stream settings are not available for feature $feature. REASON: $error")
-                PolarSensorSetting(emptyMap())
-            }
-
-        return Single.zip(availableSettings, allSettings) { available: PolarSensorSetting, all: PolarSensorSetting ->
-            if (available.settings.isEmpty()) {
-                throw Throwable("Settings are not available")
-            } else {
-                Log.d(TAG, "Feature " + feature + " available settings " + available.settings)
-                Log.d(TAG, "Feature " + feature + " all settings " + all.settings)
-                return@zip android.util.Pair(available, all)
-            }
-        }
-            .observeOn(AndroidSchedulers.mainThread())
-            .toFlowable()
-            .flatMap {
-                Single.create { e: SingleEmitter<PolarSensorSetting> ->
-                    PolarSensorSetting(getDefaultSettings())
-                }.subscribeOn(AndroidSchedulers.mainThread()).toFlowable()
-            }*/
-    }
-     */
-
-    private fun disposeAllStreams() {
+    fun disposeAllStreams() {
         accDisposable?.dispose()
-        ecgDisposable?.dispose()
+        hrDisposable?.dispose()
         sdkModeDisposable?.dispose()
+
+        job.cancel()
+
+        _trainingStatus.value = TrainingStatus.OnGoing
+        _polarDevicesList.value = listOf()
+        _hrData.value = null
+        _accData.value = null
+        _acceleration.value = 0.000000
+        _distance.value = 0.000000
+        _steps.value = 0
+        _falls.value = 0
+        _onGoing.value = false
+        _timer.value = "0"
+        _hrActivated.value = false
+        _movementTimer.value = "0"
+        _isMoving.value = false
+        _hrChartData.value = listOf()
+        _hrChartEntry.value = listOf()
+        _heartTrack.value = mutableListOf()
+        _accelerationTrack.value = mutableListOf()
+        _completeTraining.value = false
+        _loading.value = false
+        totalSeconds = 0
     }
+
+
+    suspend fun sendTraining(
+        query: FinishedTrainingData
+    ): Result<String> {
+        return try {
+            val sendTraining = network.sendTraining(query)
+            Result.success(sendTraining).also {
+                _loading.value = false
+                _completeTraining.value = true
+            }
+
+        } catch(e: Exception) {
+            e.printStackTrace()
+            Result.failure<String>(e).also {
+                _loading.value = false
+                _completeTraining.value = false
+            }
+        }
+    }
+
 }

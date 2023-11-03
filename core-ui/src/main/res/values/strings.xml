@@ -3,4 +3,17 @@
     <string name="app_name">3rd Time</string>
 
     <string name="auth_login_title">Log in to your Account</string>
+
+    <!--TRACK TRAINING-->
+    <string name="training_heart_rate_label">Heart Rate</string>
+    <string name="training_falls_label">Falls</string>
+    <string name="training_timer_label">Timer</string>
+    <string name="training_motion_timer_label">Motion Timer</string>
+    <string name="training_walked_distance_label">Walked Distance</string>
+    <string name="training_acceleration_label">Acceleration</string>
+    <string name="training_steps_label">Steps</string>
+    <string name="training_start_button">Start</string>
+    <string name="training_pause_button">Pause</string>
+    <string name="training_continue_button">Continue</string>
+    <string name="training_stop_button">Stop</string>
 </resources>
