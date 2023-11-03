@@ -13,7 +13,8 @@ data class FinishedTrainingData (
     val steps: Int,
     val motionTime: String,
     val totalTime: String,
-    val timerWithHR: List<TimeWithHeartRate>
+    val timerWithHR: List<TimeWithHeartRate>,
+    val profile: Profile? = null
 )
 
 data class TimeWithHeartRate(

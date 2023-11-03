@@ -11,11 +11,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.etime.core_ui.components.TTProgressBar
 import com.polar.sdk.api.model.PolarDeviceInfo
 import kotlin.time.ExperimentalTime
 
@@ -26,6 +30,10 @@ fun ConnectDeviceScreen(
     onConnectedDevice: () -> Unit
 ){
 
+    val loading by remember {
+        mutableStateOf(false)
+    }
+
     val isConnected = trainingViewModel.isConnected.collectAsState()
 
     if(isConnected.value) {
@@ -35,10 +43,18 @@ fun ConnectDeviceScreen(
     }
 
     Column (horizontalAlignment = Alignment.CenterHorizontally){
-        Button(onClick = { trainingViewModel.searchDevice() }) {
+        Button(
+            onClick = {
+                trainingViewModel.searchDevice()
+            }
+        ) {
             Text(text = "Find Devices")
         }
         DevicesList(trainingViewModel = trainingViewModel)
+    }
+
+    if(loading){
+        TTProgressBar()
     }
 
 }

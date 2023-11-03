@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.etime.training_presentation.data.FinishedTrainingData
 import com.etime.training_presentation.data.TimeWithHeartRate
+import com.etime.training_presentation.local.TrainingDao
 import com.etime.training_presentation.remote.ThirdTimeApi
 import com.etime.training_presentation.trackTraining.TrainingStatus
 import com.etime.training_presentation.util.detectFall
@@ -35,11 +36,18 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.future.future
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
@@ -54,10 +62,12 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 @ExperimentalTime
 class TrainingViewModel @Inject constructor(
     @ApplicationContext context: Context,
+    private val dao: TrainingDao,
     private val network: ThirdTimeApi
 ) : ViewModel(){
 
@@ -143,6 +153,12 @@ class TrainingViewModel @Inject constructor(
 
     var totalSeconds = 0
 
+    private var job = Job()
+        get() {
+            if (field.isCancelled) field = Job()
+            return field
+        }
+
     private val api: PolarBleApi by lazy {
         // Notice all features are enabled
         PolarBleApiDefaultImpl.defaultImplementation(
@@ -177,7 +193,7 @@ class TrainingViewModel @Inject constructor(
 
     fun startStopwatch()
     {
-        viewModelScope.launch {
+        viewModelScope.launch(job) {
             while (isActive) {
                 delay(1000) // delay for 1 second
                 if(_onGoing.value){
@@ -193,7 +209,7 @@ class TrainingViewModel @Inject constructor(
 
     fun addHrHistorial()
     {
-        viewModelScope.launch {
+        viewModelScope.launch(job) {
             while (isActive) {
                 delay(3000) // delay for 1 second
                 if(_onGoing.value){
@@ -212,7 +228,7 @@ class TrainingViewModel @Inject constructor(
 
     fun startMovementTimer() {
         var totalSeconds = 0
-        viewModelScope.launch {
+        viewModelScope.launch(job) {
             while (isActive) {
                 delay(1000) // delay for 1 second
                 if(_isMoving.value && _onGoing.value){
@@ -254,7 +270,7 @@ class TrainingViewModel @Inject constructor(
     fun trackStreamTraining(deviceId: String) {
         val ecgCreatedData = mutableListOf<FloatEntry>()
         val handler = Handler(Looper.getMainLooper())
-
+        job.start()
         _onGoing.value = true
         hrDisposable = api.startHrStreaming(deviceId)
             .observeOn(Schedulers.io())
@@ -332,7 +348,7 @@ class TrainingViewModel @Inject constructor(
     fun searchDevice() {
         val foundDevices = mutableListOf<PolarDeviceInfo>()
 
-        viewModelScope.launch {
+        viewModelScope.launch(job) {
             api.searchForDevice()
                 .asFlow()
                 .onEach { polarDeviceInfo ->
@@ -361,6 +377,9 @@ class TrainingViewModel @Inject constructor(
         }
     }
 
+    fun connectDeviceByString(deviceId: String) {
+        api.connectToDevice(deviceId)
+    }
 
     fun startPolar(){
         Throwable().addSuppressed(PolarNotificationNotEnabled())
@@ -379,8 +398,13 @@ class TrainingViewModel @Inject constructor(
 
             override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
                 Log.d(TAG, "CONNECTED: ${polarDeviceInfo.deviceId}")
-                _connectedDeviceId.value = polarDeviceInfo.deviceId
-                _isConnected.value = true
+                viewModelScope.launch(Dispatchers.IO) {
+                    dao.updateDeviceId(polarDeviceInfo.deviceId).also {
+                        _connectedDeviceId.value = polarDeviceInfo.deviceId
+                        _isConnected.value = true
+                    }
+                }
+
                 //val buttonText = getString(R.string.disconnect_from_device, deviceId)
                 //toggleButtonDown(connectButton, buttonText)
             }
@@ -416,21 +440,24 @@ class TrainingViewModel @Inject constructor(
         val avgHr = heartTrackData.map { it.hr }.average()
         val avgAcceleration = accelerationTrackData.average()
 
-        val training = FinishedTrainingData(
-            getDeviceId(context)+"${Build.BRAND}-${Build.MODEL}",
-            getTimeStamp(),
-            avgHr.toString(),
-            avgAcceleration.toString(),
-            _falls.value,
-            _steps.value,
-            _movementTimer.value,
-            _timer.value,
-            timeWithHeartRate
-        )
-
         _loading.value = true
-        viewModelScope.launch {
-            sendTraining(training)
+        viewModelScope.launch(job) {
+            dao.getProfile().collectLatest {
+                val training = FinishedTrainingData(
+                    getDeviceId(context)+"${Build.BRAND}-${Build.MODEL}",
+                    getTimeStamp(),
+                    avgHr.toString(),
+                    avgAcceleration.toString(),
+                    _falls.value,
+                    _steps.value,
+                    _movementTimer.value,
+                    _timer.value,
+                    timeWithHeartRate,
+                    it
+                )
+
+                sendTraining(training)
+            }
         }
         //saveTrainingToFile(context, training, "training.json")
     }
@@ -449,10 +476,33 @@ class TrainingViewModel @Inject constructor(
         }
     }
 
-    private fun disposeAllStreams() {
+    fun disposeAllStreams() {
         accDisposable?.dispose()
         hrDisposable?.dispose()
         sdkModeDisposable?.dispose()
+
+        job.cancel()
+
+        _trainingStatus.value = TrainingStatus.OnGoing
+        _polarDevicesList.value = listOf()
+        _hrData.value = null
+        _accData.value = null
+        _acceleration.value = 0.000000
+        _distance.value = 0.000000
+        _steps.value = 0
+        _falls.value = 0
+        _onGoing.value = false
+        _timer.value = "0"
+        _hrActivated.value = false
+        _movementTimer.value = "0"
+        _isMoving.value = false
+        _hrChartData.value = listOf()
+        _hrChartEntry.value = listOf()
+        _heartTrack.value = mutableListOf()
+        _accelerationTrack.value = mutableListOf()
+        _completeTraining.value = false
+        _loading.value = false
+        totalSeconds = 0
     }
 
 

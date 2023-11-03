@@ -75,6 +75,11 @@ dependencies {
     implementation(Retrofit.okHttpLoggingInterceptor)
     implementation(Retrofit.moshiConverter)
 
+    implementation(Room.runtime)
+    annotationProcessor(Room.compiler)
+    kapt(Room.compiler)
+    implementation(Room.ktx)
+
     //POLAR TOOLS
     implementation(Polar.sdk)
     implementation(RxJava.java)

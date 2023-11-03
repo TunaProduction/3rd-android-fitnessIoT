@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -115,7 +116,10 @@ fun TrackTrainingScreen(
     }
 
     if (finishedTraining.value) {
-        backNavigation()
+        LaunchedEffect(key1 = true) {
+            trainingViewModel.disposeAllStreams()
+            backNavigation()
+        }
     }
 }
 

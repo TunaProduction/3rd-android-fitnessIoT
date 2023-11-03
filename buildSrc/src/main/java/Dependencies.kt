@@ -47,6 +47,7 @@ object Versions{
     const val gsonVersion = "2.10.1"
     const val retrofitVersion = "2.9.0"
     const val okHttpVersion = "4.11.0"
+    const val roomVersion = "2.6.0"
 }
 
 object Compose{
@@ -139,4 +140,10 @@ object Gson {
 object Moshi {
     private const val version = "1.13.0"
     const val moshiCodegen = "kapt 'com.squareup.moshi:moshi-kotlin-codegen:$version'"
+}
+
+object Room {
+    const val runtime = "androidx.room:room-runtime:${Versions.roomVersion}"
+    const val compiler = "androidx.room:room-compiler:${Versions.roomVersion}"
+    const val ktx = "androidx.room:room-ktx:${Versions.roomVersion}"
 }

@@ -1,12 +1,17 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("kotlin-kapt")
 }
 
 apply(from = "$rootDir/compose-module.gradle")
 
 android {
     namespace = "com.etime.training_presentation"
+}
+
+kapt {
+    correctErrorTypes = true
 }
 
 dependencies {
@@ -32,5 +37,8 @@ dependencies {
     implementation(Retrofit.okHttpLoggingInterceptor)
     implementation(Retrofit.moshiConverter)
 
-
+    implementation(Room.runtime)
+    implementation(Room.ktx)
+    annotationProcessor(Room.compiler)
+    kapt(Room.compiler)
 }
