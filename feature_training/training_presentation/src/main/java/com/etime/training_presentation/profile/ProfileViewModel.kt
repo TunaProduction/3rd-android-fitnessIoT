@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,7 +29,7 @@ class ProfileViewModel @Inject constructor(
     private val _deviceId = MutableStateFlow<String>("")
     val deviceId = _deviceId.asStateFlow()
 
-    fun createOrEditUser(profile: Profile){
+    fun createOrEditUser2(profile: Profile){
         _loading.value = true
         viewModelScope.launch {
             trainingDao.verifyExistence().collectLatest {
@@ -45,6 +46,32 @@ class ProfileViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    fun createOrEditUser(profile: Profile) {
+        _loading.value = true
+        viewModelScope.launch {
+            val existingProfiles = trainingDao.verifyExistence().firstOrNull()
+            if (existingProfiles.isNullOrEmpty()) {
+                trainingDao.insert(profile)
+            } else {
+                // Here you'd retrieve the existing profile, update only the fields that changed,
+                // and then call update
+                val currentProfile = existingProfiles.first()
+                val updatedProfile = currentProfile.copy(
+                    // Assuming you have a way to determine if a field has been edited
+                    userType = profile.userType.takeIf { it.isNotEmpty() } ?: currentProfile.userType,
+                    name = profile.name.takeIf { it.isNotEmpty() } ?: currentProfile.name,
+                    weight = profile.weight.takeIf { it.isNotEmpty() } ?: currentProfile.weight,
+                    height = profile.height.takeIf { it.isNotEmpty() } ?: currentProfile.height,
+                    age = profile.age.takeIf { it.isNotEmpty() } ?: currentProfile.age,
+                    // add similar logic for weight, height, and age
+                )
+                trainingDao.update(updatedProfile)
+            }
+            _loading.value = false
+            _finished.value = true
         }
     }
 
