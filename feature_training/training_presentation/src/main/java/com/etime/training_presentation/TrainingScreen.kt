@@ -68,7 +68,7 @@ fun TrainingScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        if(deviceId.value.isNotEmpty()){
+        if(!deviceId.value.isNullOrEmpty()){
             lastConnectedDevice(
                 isConnected = isConnected.value,
                 deviceId = deviceId.value

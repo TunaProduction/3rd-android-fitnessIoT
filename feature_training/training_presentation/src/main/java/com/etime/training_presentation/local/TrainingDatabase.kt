@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.etime.training_presentation.data.Profile
 
-@Database(entities = [Profile::class], version = 1)
+@Database(entities = [Profile::class], version = 2)
 abstract class TrainingDatabase : RoomDatabase() {
 
     abstract fun trainingDao(): TrainingDao

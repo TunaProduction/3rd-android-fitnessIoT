@@ -33,6 +33,18 @@ fun ProfileScreen(
         mutableStateOf("")
     }
 
+    var weight by remember {
+        mutableStateOf("")
+    }
+
+    var height by remember {
+        mutableStateOf("")
+    }
+
+    var age by remember {
+        mutableStateOf("")
+    }
+
     var userType by remember {
         mutableStateOf("")
     }
@@ -58,6 +70,43 @@ fun ProfileScreen(
         )
 
         Spacer(modifier = Modifier.height(5.dp))
+
+        TTTextField(
+            value = age,
+            onValueChange = {
+                if(it.all { char ->
+                        char.isDigit() || char.isWhitespace()
+                    }) age = it
+            },
+            placeHolder = "Age"
+        )
+
+        Spacer(modifier = Modifier.height(5.dp))
+
+        TTTextField(
+            value = height,
+            onValueChange = {
+                if(it.all { char ->
+                        char.isDigit() || char.isWhitespace()
+                    }) height = it
+            },
+            placeHolder = "Height"
+        )
+
+        Spacer(modifier = Modifier.height(5.dp))
+
+        TTTextField(
+            value = weight,
+            onValueChange = {
+                if(it.all { char ->
+                        char.isDigit() || char.isWhitespace()
+                    }) weight = it
+            },
+            placeHolder = "Weight"
+        )
+
+        Spacer(modifier = Modifier.height(5.dp))
+
         TTTextField(
             value = userType,
             onValueChange = {
@@ -76,7 +125,10 @@ fun ProfileScreen(
             viewModel.createOrEditUser(
                 Profile(
                     userType = userType,
-                    name = name
+                    name = name,
+                    weight = weight,
+                    height = height,
+                    age = age
                 )
             )
         }

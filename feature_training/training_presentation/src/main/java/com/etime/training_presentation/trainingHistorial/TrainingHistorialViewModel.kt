@@ -30,7 +30,7 @@ class TrainingHistorialViewModel @Inject constructor(
         val folder = getDeviceId(context)+"${Build.BRAND}-${Build.MODEL}"
         _loading.value = true
         return try {
-            val getTrainings = network.getTrainings("1b1d51a7c13eaa01Redmi-M2006C3LG")
+            val getTrainings = network.getTrainings(folder)
             Result.success(getTrainings).also {
                 _loading.value = false
                 _trainings.value = it.getOrNull()

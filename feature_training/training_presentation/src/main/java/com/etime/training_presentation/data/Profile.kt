@@ -9,5 +9,8 @@ data class Profile (
     @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "userId") val userId: Int = 0,
     val userType: String,
     val name: String,
+    val weight: String,
+    val height: String,
+    val age: String,
     val deviceId: String? = null
 )
