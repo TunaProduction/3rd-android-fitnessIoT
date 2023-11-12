@@ -223,21 +223,6 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
                 )
             }
 
-
-            item {
-                TTTrainingCell(
-                    name = stringResource(id = R.string.training_walked_distance_label),
-                    value = distance.value.toString(),
-                )
-            }
-
-            item {
-                TTTrainingCell(
-                    name = stringResource(id = R.string.training_steps_label),
-                    value = steps.value.toString(),
-                )
-            }
-
             item {
                 TTTrainingCell(
                     name = stringResource(id = R.string.training_timer_label),
@@ -247,7 +232,7 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
 
             item {
                 TTTrainingCell(
-                    name = stringResource(id = R.string.training_steps_label),
+                    name = stringResource(id = R.string.training_motion_timer_label),
                     value = movementTimer.value,
                 )
             }
