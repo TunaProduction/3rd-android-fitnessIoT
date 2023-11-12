@@ -5,8 +5,8 @@ import java.lang.Math.sqrt
 import kotlin.math.pow
 
 
-    private val heavyMovementThreshold = 2000.0
-private val heavyMovementDuration = 5 // Example value, adjust as needed based on your testing
+    private val heavyMovementThreshold = 1200.0
+private val heavyMovementDuration = 2 // Example value, adjust as needed based on your testing
 private var consecutiveHeavyMovements = 0
 
     fun isHeavyMovement(polarAccelerometerData: PolarAccelerometerData): Boolean {

@@ -3,8 +3,8 @@ package com.etime.training_presentation.util
 import com.polar.sdk.api.model.PolarAccelerometerData
 
 fun detectFall(polarData: PolarAccelerometerData): Boolean {
-    val heavyFallThreshold = 12000  // Increase this threshold for detecting only heavy falls in millig
-    val durationThreshold = 500_000_000  // Duration threshold in nanoseconds
+    val heavyFallThreshold = 6000  // Increase this threshold for detecting only heavy falls in millig
+    val durationThreshold = 400_000_000  // Duration threshold in nanoseconds
     var heavyFallDetected = false
     var startFallTime = 0L
 
