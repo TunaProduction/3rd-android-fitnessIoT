@@ -35,11 +35,14 @@ import com.etime.core_ui.components.TTButton
 import com.etime.core_ui.components.TTProgressBar
 import com.etime.core_ui.components.TTTrainingCell
 import com.etime.training_presentation.TrainingViewModel
+import com.etime.training_presentation.data.Profile
+import com.etime.training_presentation.local.TrainingDao
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
 import com.patrykandpatrick.vico.compose.chart.line.lineChart
 import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
+import kotlinx.coroutines.flow.firstOrNull
 import kotlin.time.ExperimentalTime
 
 
@@ -51,7 +54,7 @@ fun TrackTrainingScreen(
     trainingViewModel: TrainingViewModel,
     trigger: Boolean,
     backNavigation: () -> Unit,
-    finishedNavigation: () -> Unit = { }
+    finishedNavigation: () -> Unit = { },
 ) {
 
     val context = LocalContext.current
@@ -187,6 +190,10 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
     val timer = trainingViewModel.timer.collectAsState()
     val movementTimer = trainingViewModel.movementTimer.collectAsState()
     //val ecgData = trainingViewModel.ecgEntry.collectAsState()*/
+val currentProfile = trainingViewModel.getProfile()
+    val restingHeartRateRecord = 100; //TODO no se como calcularias esto...
+    val maxHeartRate = (220 - (currentProfile?.age?.toInt() ?: 0));
+    val reserveHeartRate = maxHeartRate - restingHeartRateRecord;
 
     LazyVerticalGrid(
         modifier = Modifier
@@ -198,11 +205,79 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
         ),
         content = {
 
+
             hrData.value?.let{
                 item {
                     TTTrainingCell(
                         name = stringResource(id = R.string.training_heart_rate_label),
                         value = it.hr.toString(),
+                    )
+                }
+            }
+
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_max_heart_rate_label),
+                        value = maxHeartRate.toString(),
+                    )
+                }
+            }
+
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_reserve_heart_rate_label),
+                        value = reserveHeartRate.toString(),
+                    )
+                }
+            }
+
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_label),
+                        value = "",
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_1_label),
+                        value = (reserveHeartRate*.5).toString() + "-" + (reserveHeartRate*.6).toString(),
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_2_label),
+                        value = (reserveHeartRate*.6).toString() + "-" + (reserveHeartRate*.7).toString(),
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_3_label),
+                        value = (reserveHeartRate*.7).toString() + "-" + (reserveHeartRate*.8).toString(),
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_4_label),
+                        value = (reserveHeartRate*.8).toString() + "-" + (reserveHeartRate*.9).toString(),
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_5_label),
+                        value = (reserveHeartRate*.9).toString() + "-" + (reserveHeartRate).toString(),
                     )
                 }
             }

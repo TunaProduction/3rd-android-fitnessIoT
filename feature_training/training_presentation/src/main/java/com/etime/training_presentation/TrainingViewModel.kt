@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.etime.training_presentation.data.FinishedTrainingData
+import com.etime.training_presentation.data.Profile
 import com.etime.training_presentation.data.TimeWithHeartRate
 import com.etime.training_presentation.local.TrainingDao
 import com.etime.training_presentation.remote.ThirdTimeApi
@@ -46,11 +47,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
@@ -475,6 +478,17 @@ class TrainingViewModel @Inject constructor(
             e.printStackTrace()
         }
     }
+
+    fun getProfile(): Profile? =
+        runBlocking {
+        val existingProfiles = dao.verifyExistence().firstOrNull()
+        if (existingProfiles.isNullOrEmpty()) {
+            null
+        } else {
+            // Here you'd retrieve the existing profile
+            existingProfiles.first()
+    }}
+
 
     fun disposeAllStreams() {
         accDisposable?.dispose()
