@@ -98,6 +98,9 @@ class TrainingViewModel @Inject constructor(
     private val _connectedDeviceId = MutableStateFlow("")
     val connectedDeviceId = _connectedDeviceId.asStateFlow()
 
+    private val _connectedDeviceBattery = MutableStateFlow(0)
+    val connectedDeviceBattery = _connectedDeviceBattery.asStateFlow()
+
     private val _hrData = MutableStateFlow<PolarHrData.PolarHrSample?>(null)
     val hrData = _hrData.asStateFlow()
 
@@ -431,6 +434,8 @@ class TrainingViewModel @Inject constructor(
 
             override fun batteryLevelReceived(identifier: String, level: Int) {
                 Log.d(TAG, "BATTERY LEVEL: $level")
+                _connectedDeviceBattery.value = level
+
             }
 
             override fun hrNotificationReceived(identifier: String, data: PolarHrData.PolarHrSample) {

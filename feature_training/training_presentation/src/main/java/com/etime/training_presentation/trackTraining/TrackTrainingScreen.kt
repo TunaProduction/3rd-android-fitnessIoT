@@ -15,6 +15,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,7 +57,7 @@ import kotlin.time.ExperimentalTime
 
 val chartEntryModelProducer: ChartEntryModelProducer = ChartEntryModelProducer()
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TrackTrainingScreen(
     trainingViewModel: TrainingViewModel,
@@ -84,7 +93,30 @@ fun TrackTrainingScreen(
             view.keepScreenOn = false
         }
     })
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        CenterAlignedTopAppBar(
+            title = { Text(text = "My traingin!!!! POOWAAAA") },
+            actions = {
+                IconButton(onClick = { /*TODO*/ }) {
+                    var battery = trainingViewModel.connectedDeviceBattery.collectAsState();
+                    if(battery.value>50)
+                    { Icon(imageVector = Icons.Default.Favorite,
+                        contentDescription = null )
+                    }
+                    else
+                    { Icon(imageVector = Icons.Default.FavoriteBorder,
+                        contentDescription = null )
+                    }
+                }
+            }
+        )
 
+    }
     Column (
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
