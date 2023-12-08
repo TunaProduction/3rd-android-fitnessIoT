@@ -270,15 +270,29 @@ class TrainingViewModel @Inject constructor(
 
     fun trackStreamTraining(deviceId: String) {
         _trainingStatus.value = TrainingStatus.OnGoing
-        val ecgCreatedData = mutableListOf<FloatEntry>()
+
         val handler = Handler(Looper.getMainLooper())
         job.start()
         _onGoing.value = true
+
+        turnOnHr(deviceId)
+        turnOnAcc(deviceId)
+
+        startStopwatch()
+        startMovementTimer()
+        addHrHistorial()
+
+    }
+
+    private fun turnOnHr(
+        deviceId: String,
+    ) {
+        val ecgCreatedData = mutableListOf<FloatEntry>()
         hrDisposable = api.startHrStreaming(deviceId)
             .observeOn(Schedulers.io())
             .subscribe(
                 { hrData: PolarHrData ->
-                    if(_onGoing.value){
+                    if (_onGoing.value) {
                         for (sample in hrData.samples) {
                             _hrData.value = sample
                             _heartTrack.value.add(sample)
@@ -294,49 +308,6 @@ class TrainingViewModel @Inject constructor(
                 },
                 { Log.d(TAG, "HR stream complete") }
             )
-
-        turnOnAcc(deviceId)
-
-        /*accDisposable = api.startAccStreaming(
-            deviceId,
-            PolarSensorSetting(getDefaultSettings())
-        )
-            .observeOn(Schedulers.io())
-            .subscribe(
-                { polarAccelerometerData: PolarAccelerometerData ->
-                    if(_onGoing.value) {
-                        Log.d(TAG, "ACC RUNNING")
-                        _acceleration.value = getDeltaLinearAcceleration(
-                            polarAccelerometerData.samples,
-                            0.000000
-                        ).first
-
-                        _accelerationTrack.value.add(_acceleration.value)
-
-                        val walk = getWalkedDistance(polarAccelerometerData.samples)
-                        _distance.value = walk.first
-                        _steps.value = walk.second
-
-                        _isMoving.value = isHeavyMovement(polarAccelerometerData)
-
-                        if (detectFall(polarAccelerometerData))
-                            _falls.value++
-                    }
-                },
-                { error: Throwable ->
-                    //toggleButtonUp(accButton, R.string.start_acc_stream)
-                    Log.e(TAG, "ACC stream failed. Reason $error")
-                },
-                {
-                    //showToast("ACC stream complete")
-                    Log.d(TAG, "ACC stream complete")
-                }
-            )*/
-
-        startStopwatch()
-        startMovementTimer()
-        addHrHistorial()
-
     }
 
     private fun turnOnAcc(deviceId: String) {
@@ -460,6 +431,7 @@ class TrainingViewModel @Inject constructor(
 
                 if(trainingStatus.value != TrainingStatus.Finished) {
                     turnOnAcc(_connectedDeviceId.value)
+                    turnOnHr(_connectedDeviceId.value)
                 }
                 //val buttonText = getString(R.string.disconnect_from_device, deviceId)
                 //toggleButtonDown(connectButton, buttonText)
@@ -473,6 +445,7 @@ class TrainingViewModel @Inject constructor(
                 Log.d(TAG, "DISCONNECTED: ${polarDeviceInfo.deviceId}")
                 _isConnected.value = false
                 accDisposable?.dispose()
+                hrDisposable?.dispose()
                 if(trainingStatus.value == TrainingStatus.Finished) {
                     _connectedDeviceId.value = ""
                 }
