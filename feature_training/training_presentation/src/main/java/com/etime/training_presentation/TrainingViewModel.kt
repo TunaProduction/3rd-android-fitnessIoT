@@ -34,6 +34,7 @@ import com.polar.sdk.api.model.PolarHrData
 import com.polar.sdk.api.model.PolarSensorSetting
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Dispatchers
@@ -122,7 +123,7 @@ class TrainingViewModel @Inject constructor(
     private val _hrActivated = MutableStateFlow<Boolean>(false)
     val hrActivated = _hrActivated.asStateFlow()
 
-    private val _trainingStatus = MutableStateFlow<TrainingStatus>(TrainingStatus.OnGoing)
+    private val _trainingStatus = MutableStateFlow<TrainingStatus>(TrainingStatus.Finished)
     val trainingStatus = _trainingStatus.asStateFlow()
 
     private val _movementTimer = MutableStateFlow<String>("0")
@@ -268,6 +269,7 @@ class TrainingViewModel @Inject constructor(
     }
 
     fun trackStreamTraining(deviceId: String) {
+        _trainingStatus.value = TrainingStatus.OnGoing
         val ecgCreatedData = mutableListOf<FloatEntry>()
         val handler = Handler(Looper.getMainLooper())
         job.start()
@@ -282,7 +284,7 @@ class TrainingViewModel @Inject constructor(
                             _heartTrack.value.add(sample)
                             ecgCreatedData.add(entryOf(totalSeconds.toFloat(), sample.hr))
                             _hrChartEntry.tryEmit(ecgCreatedData)
-                            Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
+                            //Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
 
                         }
                     }
@@ -293,7 +295,9 @@ class TrainingViewModel @Inject constructor(
                 { Log.d(TAG, "HR stream complete") }
             )
 
-        accDisposable = api.startAccStreaming(
+        turnOnAcc(deviceId)
+
+        /*accDisposable = api.startAccStreaming(
             deviceId,
             PolarSensorSetting(getDefaultSettings())
         )
@@ -327,11 +331,60 @@ class TrainingViewModel @Inject constructor(
                     //showToast("ACC stream complete")
                     Log.d(TAG, "ACC stream complete")
                 }
-            )
+            )*/
 
         startStopwatch()
         startMovementTimer()
         addHrHistorial()
+
+    }
+
+    private fun turnOnAcc(deviceId: String) {
+        var accOn = false
+
+        do {
+            print("waiting... ")
+
+        } while (!api.isFeatureReady(_connectedDeviceId.value, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING))
+
+
+        val availableSettings =
+            api.requestStreamSettings(deviceId, PolarBleApi.PolarDeviceDataType.ACC).toFlowable()
+        accDisposable = availableSettings
+            .flatMap { settings: PolarSensorSetting ->
+                api.startAccStreaming(deviceId, settings)
+
+            }
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                { polarAccelerometerData: PolarAccelerometerData ->
+                    if (_onGoing.value) {
+                        Log.d(TAG, "ACC RUNNING")
+                        _acceleration.value = getDeltaLinearAcceleration(
+                            polarAccelerometerData.samples,
+                            0.000000
+                        ).first
+
+                        _accelerationTrack.value.add(_acceleration.value)
+
+                        val walk = getWalkedDistance(polarAccelerometerData.samples)
+                        _distance.value = walk.first
+                        _steps.value = walk.second
+
+                        _isMoving.value = isHeavyMovement(polarAccelerometerData)
+
+                        if (detectFall(polarAccelerometerData))
+                            _falls.value++
+                    }
+                },
+                { error: Throwable ->
+                    Log.e(TAG, "ACC stream failed. Reason $error")
+                },
+                {
+                    Log.d(TAG, "ACC stream complete")
+                }
+            )
+
 
     }
 
@@ -405,6 +458,9 @@ class TrainingViewModel @Inject constructor(
                     }
                 }
 
+                if(trainingStatus.value != TrainingStatus.Finished) {
+                    turnOnAcc(_connectedDeviceId.value)
+                }
                 //val buttonText = getString(R.string.disconnect_from_device, deviceId)
                 //toggleButtonDown(connectButton, buttonText)
             }
@@ -416,14 +472,17 @@ class TrainingViewModel @Inject constructor(
             override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
                 Log.d(TAG, "DISCONNECTED: ${polarDeviceInfo.deviceId}")
                 _isConnected.value = false
-                _connectedDeviceId.value = ""
+                accDisposable?.dispose()
+                if(trainingStatus.value == TrainingStatus.Finished) {
+                    _connectedDeviceId.value = ""
+                }
                 //val buttonText = getString(R.string.connect_to_device, deviceId)
                 //toggleButtonUp(connectButton, buttonText)
                 //toggleButtonUp(toggleSdkModeButton, R.string.enable_sdk_mode)
             }
 
             override fun disInformationReceived(identifier: String, uuid: UUID, value: String) {
-                Log.d(TAG, "DIS INFO uuid: $uuid value: $value")
+                Log.d(TAG, "DIS INFO uuid: $uuid value: $value, identifier: $identifier")
             }
 
             override fun batteryLevelReceived(identifier: String, level: Int) {
@@ -433,6 +492,7 @@ class TrainingViewModel @Inject constructor(
             override fun hrNotificationReceived(identifier: String, data: PolarHrData.PolarHrSample) {
                 // deprecated
             }
+
         })
     }
 
@@ -483,7 +543,7 @@ class TrainingViewModel @Inject constructor(
 
         job.cancel()
 
-        _trainingStatus.value = TrainingStatus.OnGoing
+        _trainingStatus.value = TrainingStatus.Finished
         _polarDevicesList.value = listOf()
         _hrData.value = null
         _accData.value = null
