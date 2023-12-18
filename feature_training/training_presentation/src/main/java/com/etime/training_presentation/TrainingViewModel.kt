@@ -158,6 +158,9 @@ class TrainingViewModel @Inject constructor(
     private val _loading = MutableStateFlow(false)
     val loading = _loading.asStateFlow()
 
+    private val _profile = MutableStateFlow<Profile?>(null)
+    var profile = _profile.asStateFlow()
+
     var totalSeconds = 0
 
     private var job = Job()
@@ -275,6 +278,7 @@ class TrainingViewModel @Inject constructor(
     }
 
     fun trackStreamTraining(deviceId: String) {
+        getProfile()
         _trainingStatus.value = TrainingStatus.OnGoing
 
         val handler = Handler(Looper.getMainLooper())
@@ -350,8 +354,11 @@ class TrainingViewModel @Inject constructor(
 
                         _isMoving.value = isHeavyMovement(polarAccelerometerData)
 
-                        if (detectFall(polarAccelerometerData))
-                            _falls.value++
+                        profile.value?.let {
+                            if (detectFall(polarAccelerometerData, it.height.toInt()))
+                                _falls.value++
+                        }
+
                     }
                 },
                 { error: Throwable ->
@@ -517,15 +524,12 @@ class TrainingViewModel @Inject constructor(
         }
     }
 
-    fun getProfile(): Profile? =
-        runBlocking {
-        val existingProfiles = dao.verifyExistence().firstOrNull()
-        if (existingProfiles.isNullOrEmpty()) {
-            null
-        } else {
-            // Here you'd retrieve the existing profile
-            existingProfiles.first()
-    }}
+    fun getProfile() {//asa
+        viewModelScope.launch {
+            val existingProfiles = dao.verifyExistence().firstOrNull()
+            _profile.value = existingProfiles?.first()
+        }
+    }
 
 
     fun disposeAllStreams() {

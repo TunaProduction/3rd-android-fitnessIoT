@@ -224,9 +224,9 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
     val timer = trainingViewModel.timer.collectAsState()
     val movementTimer = trainingViewModel.movementTimer.collectAsState()
     //val ecgData = trainingViewModel.ecgEntry.collectAsState()*/
-val currentProfile = trainingViewModel.getProfile()
+    val currentProfile = trainingViewModel.profile.collectAsState()
     val restingHeartRateRecord = 100; //TODO no se como calcularias esto...
-    val maxHeartRate = (220 - (currentProfile?.age?.toInt() ?: 0));
+    val maxHeartRate = (220 - (currentProfile.value?.age?.toInt() ?: 0));
     val reserveHeartRate = maxHeartRate - restingHeartRateRecord;
 
     LazyVerticalGrid(
@@ -249,72 +249,72 @@ val currentProfile = trainingViewModel.getProfile()
                 }
             }
 
-            hrData.value?.let{
-                item {
-                    TTTrainingCell(
-                        name = stringResource(id = R.string.training_max_heart_rate_label),
-                        value = maxHeartRate.toString(),
-                    )
-                }
-            }
+            /* hrData.value?.let{
+                 item {
+                     TTTrainingCell(
+                         name = stringResource(id = R.string.training_max_heart_rate_label),
+                         value = maxHeartRate.toString(),
+                     )
+                 }
+             }
 
-            hrData.value?.let{
-                item {
-                    TTTrainingCell(
-                        name = stringResource(id = R.string.training_reserve_heart_rate_label),
-                        value = reserveHeartRate.toString(),
-                    )
-                }
-            }
+             hrData.value?.let{
+                 item {
+                     TTTrainingCell(
+                         name = stringResource(id = R.string.training_reserve_heart_rate_label),
+                         value = reserveHeartRate.toString(),
+                     )
+                 }
+             }
 
-            hrData.value?.let{
-                item {
-                    TTTrainingCell(
-                        name = stringResource(id = R.string.training_training_zones_label),
-                        value = "",
-                    )
-                }
-            }
-            hrData.value?.let{
-                item {
-                    TTTrainingCell(
-                        name = stringResource(id = R.string.training_training_zones_1_label),
-                        value = (reserveHeartRate*.5).toString() + "-" + (reserveHeartRate*.6).toString(),
-                    )
-                }
-            }
-            hrData.value?.let{
-                item {
-                    TTTrainingCell(
-                        name = stringResource(id = R.string.training_training_zones_2_label),
-                        value = (reserveHeartRate*.6).toString() + "-" + (reserveHeartRate*.7).toString(),
-                    )
-                }
-            }
-            hrData.value?.let{
-                item {
-                    TTTrainingCell(
-                        name = stringResource(id = R.string.training_training_zones_3_label),
-                        value = (reserveHeartRate*.7).toString() + "-" + (reserveHeartRate*.8).toString(),
-                    )
-                }
-            }
-            hrData.value?.let{
-                item {
-                    TTTrainingCell(
-                        name = stringResource(id = R.string.training_training_zones_4_label),
-                        value = (reserveHeartRate*.8).toString() + "-" + (reserveHeartRate*.9).toString(),
-                    )
-                }
-            }
-            hrData.value?.let{
-                item {
-                    TTTrainingCell(
-                        name = stringResource(id = R.string.training_training_zones_5_label),
-                        value = (reserveHeartRate*.9).toString() + "-" + (reserveHeartRate).toString(),
-                    )
-                }
-            }
+             hrData.value?.let{
+                 item {
+                     TTTrainingCell(
+                         name = stringResource(id = R.string.training_training_zones_label),
+                         value = "",
+                     )
+                 }
+             }
+             hrData.value?.let{
+                 item {
+                     TTTrainingCell(
+                         name = stringResource(id = R.string.training_training_zones_1_label),
+                         value = (reserveHeartRate*.5).toString() + "-" + (reserveHeartRate*.6).toString(),
+                     )
+                 }
+             }
+             hrData.value?.let{
+                 item {
+                     TTTrainingCell(
+                         name = stringResource(id = R.string.training_training_zones_2_label),
+                         value = (reserveHeartRate*.6).toString() + "-" + (reserveHeartRate*.7).toString(),
+                     )
+                 }
+             }
+             hrData.value?.let{
+                 item {
+                     TTTrainingCell(
+                         name = stringResource(id = R.string.training_training_zones_3_label),
+                         value = (reserveHeartRate*.7).toString() + "-" + (reserveHeartRate*.8).toString(),
+                     )
+                 }
+             }
+             hrData.value?.let{
+                 item {
+                     TTTrainingCell(
+                         name = stringResource(id = R.string.training_training_zones_4_label),
+                         value = (reserveHeartRate*.8).toString() + "-" + (reserveHeartRate*.9).toString(),
+                     )
+                 }
+             }
+             hrData.value?.let{
+                 item {
+                     TTTrainingCell(
+                         name = stringResource(id = R.string.training_training_zones_5_label),
+                         value = (reserveHeartRate*.9).toString() + "-" + (reserveHeartRate).toString(),
+                     )
+                 }
+             }*/
 
             acceleration.value?.let {
                 item {

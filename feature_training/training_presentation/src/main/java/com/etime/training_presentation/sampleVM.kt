@@ -389,8 +389,8 @@ class TrainingViewModel2 @Inject constructor(
 
                     _isMoving.value = isHeavyMovement(polarAccelerometerData)
 
-                    if(detectFall(polarAccelerometerData))
-                        _falls.value++
+                   /* if(detectFall(polarAccelerometerData))
+                        _falls.value++*/
 
                 },
                 { error: Throwable ->
