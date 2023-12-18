@@ -16,4 +16,12 @@
     <string name="training_pause_button">Pause</string>
     <string name="training_continue_button">Continue</string>
     <string name="training_stop_button">Stop</string>
+    <string name="training_max_heart_rate_label">Maximum Heart Rate</string>
+    <string name="training_reserve_heart_rate_label">Reserve Heart Rate</string>
+    <string name="training_training_zones_label">Training Zones</string>
+    <string name="training_training_zones_1_label">Zones 1 (Very Light)</string>
+    <string name="training_training_zones_2_label">Zones 2 (Light)</string>
+    <string name="training_training_zones_3_label">Zones 3 (Moderate)</string>
+    <string name="training_training_zones_4_label">Zones 4 (Hard)</string>
+    <string name="training_training_zones_5_label">Zones 5 (Max)</string>
 </resources>

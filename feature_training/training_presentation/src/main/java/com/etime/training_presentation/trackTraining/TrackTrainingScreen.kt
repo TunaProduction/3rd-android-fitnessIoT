@@ -15,6 +15,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +44,8 @@ import com.etime.core_ui.components.TTButton
 import com.etime.core_ui.components.TTProgressBar
 import com.etime.core_ui.components.TTTrainingCell
 import com.etime.training_presentation.TrainingViewModel
+import com.etime.training_presentation.data.Profile
+import com.etime.training_presentation.local.TrainingDao
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
@@ -42,18 +53,19 @@ import com.patrykandpatrick.vico.compose.chart.line.lineChart
 import com.patrykandpatrick.vico.core.chart.decoration.Decoration
 import com.patrykandpatrick.vico.core.chart.layout.HorizontalLayout
 import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
+import kotlinx.coroutines.flow.firstOrNull
 import kotlin.time.ExperimentalTime
 
 
 val chartEntryModelProducer: ChartEntryModelProducer = ChartEntryModelProducer()
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TrackTrainingScreen(
     trainingViewModel: TrainingViewModel,
     trigger: Boolean,
     backNavigation: () -> Unit,
-    finishedNavigation: () -> Unit = { }
+    finishedNavigation: () -> Unit = { },
 ) {
 
     val context = LocalContext.current
@@ -83,7 +95,30 @@ fun TrackTrainingScreen(
             view.keepScreenOn = false
         }
     })
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        CenterAlignedTopAppBar(
+            title = { Text(text = "My traingin!!!! POOWAAAA") },
+            actions = {
+                IconButton(onClick = { /*TODO*/ }) {
+                    var battery = trainingViewModel.connectedDeviceBattery.collectAsState();
+                    if(battery.value>50)
+                    { Icon(imageVector = Icons.Default.Favorite,
+                        contentDescription = null )
+                    }
+                    else
+                    { Icon(imageVector = Icons.Default.FavoriteBorder,
+                        contentDescription = null )
+                    }
+                }
+            }
+        )
 
+    }
     Column (
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -189,6 +224,10 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
     val timer = trainingViewModel.timer.collectAsState()
     val movementTimer = trainingViewModel.movementTimer.collectAsState()
     //val ecgData = trainingViewModel.ecgEntry.collectAsState()*/
+val currentProfile = trainingViewModel.getProfile()
+    val restingHeartRateRecord = 100; //TODO no se como calcularias esto...
+    val maxHeartRate = (220 - (currentProfile?.age?.toInt() ?: 0));
+    val reserveHeartRate = maxHeartRate - restingHeartRateRecord;
 
     LazyVerticalGrid(
         modifier = Modifier
@@ -200,11 +239,79 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
         ),
         content = {
 
+
             hrData.value?.let{
                 item {
                     TTTrainingCell(
                         name = stringResource(id = R.string.training_heart_rate_label),
                         value = it.hr.toString(),
+                    )
+                }
+            }
+
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_max_heart_rate_label),
+                        value = maxHeartRate.toString(),
+                    )
+                }
+            }
+
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_reserve_heart_rate_label),
+                        value = reserveHeartRate.toString(),
+                    )
+                }
+            }
+
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_label),
+                        value = "",
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_1_label),
+                        value = (reserveHeartRate*.5).toString() + "-" + (reserveHeartRate*.6).toString(),
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_2_label),
+                        value = (reserveHeartRate*.6).toString() + "-" + (reserveHeartRate*.7).toString(),
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_3_label),
+                        value = (reserveHeartRate*.7).toString() + "-" + (reserveHeartRate*.8).toString(),
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_4_label),
+                        value = (reserveHeartRate*.8).toString() + "-" + (reserveHeartRate*.9).toString(),
+                    )
+                }
+            }
+            hrData.value?.let{
+                item {
+                    TTTrainingCell(
+                        name = stringResource(id = R.string.training_training_zones_5_label),
+                        value = (reserveHeartRate*.9).toString() + "-" + (reserveHeartRate).toString(),
                     )
                 }
             }
