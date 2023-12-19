@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.eTime.a3rd_android_fitnesslot.ui.theme._3rdandroidfitnessloTTheme
 import com.etime.core_ui.R
+import com.etime.core_ui.components.TTBattery
 import com.etime.core_ui.components.TTCircleIcon
 import com.etime.core_ui.components.TTProgressBar
 import com.etime.core_ui.components.TTTrainingCell
@@ -17,6 +18,6 @@ fun GreetingPreview() {
             value = "9.0 m",
         )*/
 
-        TTProgressBar()
+        TTBattery(level = 65)
     }
 }

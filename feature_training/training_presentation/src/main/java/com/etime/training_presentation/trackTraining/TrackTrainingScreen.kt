@@ -40,9 +40,11 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import com.etime.core_ui.LocalSpacing
 import com.etime.core_ui.R
+import com.etime.core_ui.components.TTBattery
 import com.etime.core_ui.components.TTButton
 import com.etime.core_ui.components.TTProgressBar
 import com.etime.core_ui.components.TTTrainingCell
+import com.etime.core_ui.components.TTTrainingRow
 import com.etime.training_presentation.TrainingViewModel
 import com.etime.training_presentation.data.Profile
 import com.etime.training_presentation.local.TrainingDao
@@ -85,6 +87,7 @@ fun TrackTrainingScreen(
     val hrChartData = trainingViewModel.hrChartEntry.collectAsState()
     val finishedTraining = trainingViewModel.completeTraining.collectAsState()
     val loading = trainingViewModel.loading.collectAsState()
+    val battery = trainingViewModel.connectedDeviceBattery.collectAsState()
     chartEntryModelProducer.setEntries(hrChartData.value)
 
     DisposableEffect(key1 = deviceId.value, effect = {
@@ -95,36 +98,20 @@ fun TrackTrainingScreen(
             view.keepScreenOn = false
         }
     })
-    Column(
-        modifier = Modifier
-            .fillMaxSize(),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        CenterAlignedTopAppBar(
-            title = { Text(text = "My traingin!!!! POOWAAAA") },
-            actions = {
-                IconButton(onClick = { /*TODO*/ }) {
-                    var battery = trainingViewModel.connectedDeviceBattery.collectAsState();
-                    if(battery.value>50)
-                    { Icon(imageVector = Icons.Default.Favorite,
-                        contentDescription = null )
-                    }
-                    else
-                    { Icon(imageVector = Icons.Default.FavoriteBorder,
-                        contentDescription = null )
-                    }
-                }
-            }
-        )
-
-    }
+    
     Column (
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight()
     ) {
+        TTTrainingRow (
+            name = stringResource(id = R.string.training_battery_level),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TTBattery(level = battery.value)
+        }
+        
         TrackTrainingContent(trainingViewModel)
 
         Chart(

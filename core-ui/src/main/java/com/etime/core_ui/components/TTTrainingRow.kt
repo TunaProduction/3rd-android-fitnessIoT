@@ -1,5 +1,6 @@
 package com.etime.core_ui.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -51,5 +52,31 @@ fun TTTrainingRow(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(LocalSpacing.current.spaceSmall)
         )
+    }
+}
+
+@Composable
+fun TTTrainingRow(
+    name: String,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.typography.headlineSmall,
+    content: @Composable () -> Unit = {}
+) {
+    Row (
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+
+        Text(
+            text = name,
+            style = textStyle.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(LocalSpacing.current.spaceSmall)
+        )
+
+        content()
     }
 }

@@ -1,6 +1,5 @@
 package com.etime.training_presentation
 
-import android.devicelock.DeviceId
 import androidx.compose.foundation.border
 import com.etime.core_ui.R
 import androidx.compose.foundation.clickable
@@ -14,11 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,22 +23,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.polar.sdk.api.PolarBleApi
-import com.polar.sdk.api.PolarBleApiDefaultImpl
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import com.etime.core_ui.LocalSpacing
+import com.etime.core_ui.components.TTBattery
 import com.etime.core_ui.components.TTButton
 import com.etime.core_ui.components.TTCircleIcon
 import com.etime.training_presentation.profile.ProfileViewModel
-import com.patrykandpatrick.vico.compose.component.shape.chartShape
-import com.polar.sdk.api.model.PolarDeviceInfo
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
@@ -69,9 +58,11 @@ fun TrainingScreen(
     ) {
 
         if(!deviceId.value.isNullOrEmpty()){
+            val batteryLevel = trainingViewModel.connectedDeviceBattery.collectAsState()
             lastConnectedDevice(
                 isConnected = isConnected.value,
-                deviceId = deviceId.value
+                deviceId = deviceId.value,
+                batteryLevel = batteryLevel.value
             ) {
                 trainingViewModel.connectDeviceByString(deviceId.value)
             }
@@ -91,7 +82,8 @@ fun TrainingScreen(
 fun lastConnectedDevice(
     isConnected: Boolean,
     deviceId: String,
-    connect: () -> Unit
+    batteryLevel: Int,
+    connect: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -113,6 +105,14 @@ fun lastConnectedDevice(
             }
         } else {
             Text(text = "Connected device: $deviceId")
+            Row (verticalAlignment = Alignment.CenterVertically){
+                Text(text = "Battery Level: $batteryLevel%")
+                Spacer(modifier = Modifier.width(LocalSpacing.current.spaceExtraSmall))
+                TTBattery(
+                    level = batteryLevel,
+                    size = LocalSpacing.current.spaceMedium
+                )
+            }
         }
 
     }
