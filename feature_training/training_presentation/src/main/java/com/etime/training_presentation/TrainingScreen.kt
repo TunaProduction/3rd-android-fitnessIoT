@@ -31,6 +31,7 @@ import com.etime.core_ui.LocalSpacing
 import com.etime.core_ui.components.TTBattery
 import com.etime.core_ui.components.TTButton
 import com.etime.core_ui.components.TTCircleIcon
+import com.etime.training_presentation.data.Profile
 import com.etime.training_presentation.profile.ProfileViewModel
 import kotlin.time.ExperimentalTime
 
@@ -49,6 +50,15 @@ fun TrainingScreen(
     val deviceId = profileViewModel.deviceId.collectAsState()
 
     LaunchedEffect(key1 = true) {
+        profileViewModel.createUser(
+            Profile(
+                userType = "",
+                name = "",
+                weight = "",
+                height = "",
+                age = ""
+            )
+        )
         profileViewModel.getDeviceId()
     }
 

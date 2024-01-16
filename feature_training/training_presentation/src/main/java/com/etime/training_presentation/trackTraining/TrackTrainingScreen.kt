@@ -213,8 +213,9 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
     //val ecgData = trainingViewModel.ecgEntry.collectAsState()*/
     val currentProfile = trainingViewModel.profile.collectAsState()
     val restingHeartRateRecord = 100; //TODO no se como calcularias esto...
-    val maxHeartRate = (220 - (currentProfile.value?.age?.toInt() ?: 0));
-    val reserveHeartRate = maxHeartRate - restingHeartRateRecord;
+
+    //val maxHeartRate = (220 - (currentProfile.value?.age?.toInt() ?: 0));
+    //val reserveHeartRate = maxHeartRate - restingHeartRateRecord;
 
     LazyVerticalGrid(
         modifier = Modifier

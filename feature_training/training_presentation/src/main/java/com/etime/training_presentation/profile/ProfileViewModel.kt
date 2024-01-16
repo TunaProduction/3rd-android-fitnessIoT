@@ -75,6 +75,16 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun createUser(profile: Profile) {
+        _loading.value = true
+        viewModelScope.launch {
+            val existingProfiles = trainingDao.verifyExistence().firstOrNull()
+            if (existingProfiles.isNullOrEmpty()) {
+                trainingDao.insert(profile)
+            }
+        }
+    }
+
     fun getDeviceId() {
         viewModelScope.launch {
             trainingDao.selectDeviceId().collectLatest {
