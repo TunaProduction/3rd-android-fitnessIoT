@@ -6,6 +6,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import com.etime.training_presentation.data.AppData
 import com.etime.training_presentation.data.Profile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,4 +36,14 @@ interface TrainingDao {
 
     @Query("SELECT * FROM user_table")
     fun verifyExistence(): Flow<List<Profile>>
+
+    //Training Data
+    @Insert
+    suspend fun insertTrainingData(app: AppData): Long
+
+    @Update
+    suspend fun updateTrainingData(app: AppData)
+
+    @Query("SELECT * FROM app_table")
+    fun verifyDataExistence(): Flow<List<AppData>>
 }

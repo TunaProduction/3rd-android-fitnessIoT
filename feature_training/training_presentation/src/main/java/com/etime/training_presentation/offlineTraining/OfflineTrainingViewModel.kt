@@ -1,4 +1,4 @@
-package com.etime.training_presentation
+package com.etime.training_presentation.offlineTraining
 
 import android.content.Context
 import android.os.Build
@@ -7,7 +7,6 @@ import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.etime.training_presentation.data.AppData
 import com.etime.training_presentation.data.FinishedTrainingData
 import com.etime.training_presentation.data.Profile
 import com.etime.training_presentation.data.TimeWithHeartRate
@@ -32,9 +31,6 @@ import com.polar.sdk.api.model.PolarAccelerometerData
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarEcgData
 import com.polar.sdk.api.model.PolarHrData
-import com.polar.sdk.api.model.PolarOfflineRecordingData
-import com.polar.sdk.api.model.PolarOfflineRecordingEntry
-import com.polar.sdk.api.model.PolarRecordingSecret
 import com.polar.sdk.api.model.PolarSensorSetting
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -42,7 +38,6 @@ import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,14 +57,13 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 @ExperimentalTime
-class TrainingViewModel @Inject constructor(
+class OfflineTrainingViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val dao: TrainingDao,
     private val network: ThirdTimeApi
-) : ViewModel(){
+) : ViewModel() {
 
     companion object {
         private const val TAG = "TrainingViewModel"
@@ -222,9 +216,9 @@ class TrainingViewModel @Inject constructor(
                     _hrData.value?.let {
                         timeWithHeartRate.add(
                             TimeWithHeartRate(
-                            time = formatSeconds(totalSeconds), // Your logic for getting the timestamp here
-                            hr = it.hr.toString()
-                        )
+                                time = formatSeconds(totalSeconds), // Your logic for getting the timestamp here
+                                hr = it.hr.toString()
+                            )
                         )
                     }
                 }
@@ -488,7 +482,7 @@ class TrainingViewModel @Inject constructor(
         viewModelScope.launch(job) {
             dao.getProfile().collectLatest {
                 val training = FinishedTrainingData(
-                    getDeviceId(context)+"${Build.BRAND}-${Build.MODEL}",
+                    getDeviceId(context) +"${Build.BRAND}-${Build.MODEL}",
                     getTimeStamp(),
                     avgHr.toString(),
                     avgAcceleration.toString(),
@@ -520,170 +514,13 @@ class TrainingViewModel @Inject constructor(
         }
     }
 
-    fun getProfile() {
+    fun getProfile() {//asa
         viewModelScope.launch {
             val existingProfiles = dao.verifyExistence().firstOrNull()
             _profile.value = existingProfiles?.first()
         }
     }
 
-    //OFFLINE TRAINIG WORK
-
-    private val _isTrainingRunning = MutableStateFlow(false)
-    val isTrainingRunning = _isTrainingRunning.asStateFlow()
-    private val entryCache: MutableMap<String, MutableList<PolarOfflineRecordingEntry>> = mutableMapOf()
-
-    //asa
-    fun changeTrainingStatus(appData: AppData) {
-        viewModelScope.launch {
-            val existingAppData = dao.verifyDataExistence().firstOrNull()
-            if (existingAppData.isNullOrEmpty()) {
-                dao.insertTrainingData(appData)
-
-                _isTrainingRunning.value = appData.runningTraining
-                startOrStopRecording(_isTrainingRunning.value)
-            } else {
-                // Here you'd retrieve the existing profile, update only the fields that changed,
-                // and then call update
-                val currentAppData = existingAppData.first()
-                val updatedAppData = currentAppData.copy(
-                    runningTraining = appData.runningTraining
-                )
-                dao.updateTrainingData(updatedAppData)
-
-                _isTrainingRunning.value = appData.runningTraining
-                startOrStopRecording(_isTrainingRunning.value)
-            }
-        }
-    }
-
-    fun startOrStopRecording (isRunning: Boolean) {
-        if(isRunning) {
-            startRecordingTraining()
-        } else {
-            stopRecording()
-        }
-    }
-
-    fun startRecordingTraining() {
-        Log.d(TAG, "Starts ACC recording")
-        val settings: MutableMap<PolarSensorSetting.SettingType, Int> = mutableMapOf()
-        settings[PolarSensorSetting.SettingType.SAMPLE_RATE] = 52
-        settings[PolarSensorSetting.SettingType.RESOLUTION] = 16
-        settings[PolarSensorSetting.SettingType.RANGE] = 8
-        settings[PolarSensorSetting.SettingType.CHANNELS] = 3
-        //Using a secret key managed by your own.
-        //  You can use a different key to each start recording calls.
-        //  When using key at start recording, it is also needed for the recording download, otherwise could not be decrypted
-        val yourSecret = PolarRecordingSecret(
-            byteArrayOf(
-                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
-                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-            )
-        )
-        api.startOfflineRecording(_connectedDeviceId.value, PolarBleApi.PolarDeviceDataType.ACC, PolarSensorSetting
-            (settings.toMap()),
-            yourSecret)
-            //Without a secret key
-            //api.startOfflineRecording(deviceId, PolarBleApi.PolarDeviceDataType.ACC, PolarSensorSetting(settings.toMap()))
-            .subscribe(
-                { Log.d(TAG, "start offline recording completed") },
-                { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
-            )
-    }
-
-
-
-    fun stopRecording() {
-        Log.d(TAG, "Stops ACC recording")
-        api.stopOfflineRecording(_connectedDeviceId.value, PolarBleApi.PolarDeviceDataType.ACC)
-            .subscribe(
-                {
-                    listTraining()
-                    Log.d(TAG, "stop offline recording completed")
-                },
-                { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
-            )
-    }
-
-    fun listTraining() {
-        api.listOfflineRecordings(_connectedDeviceId.value)
-            .observeOn(AndroidSchedulers.mainThread())
-            .doOnSubscribe {
-                entryCache[_connectedDeviceId.value] = mutableListOf()
-            }
-            .map {
-                entryCache[_connectedDeviceId.value]?.add(it)
-                it
-            }
-            .subscribe(
-                { polarOfflineRecordingEntry: PolarOfflineRecordingEntry ->
-
-                    downloadTraining()
-                    Log.d(
-                        TAG,
-                        "next: ${polarOfflineRecordingEntry.date} path: ${polarOfflineRecordingEntry.path} size: ${polarOfflineRecordingEntry.size}"
-                    )
-                },
-                { error: Throwable -> Log.e(TAG, "Failed to list recordings: $error") },
-                { Log.d(TAG, "list recordings complete") }
-            )
-    }
-
-    fun downloadTraining() {
-        //Example of one offline recording download
-        //NOTE: For this example you need to click on listRecordingsButton to have files entry (entryCache) up to date
-        Log.d(TAG, "Searching to recording to download... ")
-        //Get first entry for testing download
-        val offlineRecEntry = entryCache[_connectedDeviceId.value]?.firstOrNull()
-        offlineRecEntry?.let { offlineEntry ->
-            try {
-                //Using a secret key managed by your own.
-                //  You can use a different key to each start recording calls.
-                //  When using key at start recording, it is also needed for the recording download, otherwise could not be decrypted
-                val yourSecret = PolarRecordingSecret(
-                    byteArrayOf(
-                        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
-                        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
-                    )
-                )
-                api.getOfflineRecord(_connectedDeviceId.value, offlineEntry, yourSecret)
-                    //Not using a secret key
-                    //api.getOfflineRecord(deviceId, offlineEntry)
-                    .subscribe(
-                        {
-                            Log.d(TAG, "Recording ${offlineEntry.path} downloaded. Size: ${offlineEntry.size}")
-                            when (it) {
-                                is PolarOfflineRecordingData.AccOfflineRecording -> {
-                                    Log.d(TAG, "ACC Recording started at ${it.startTime}")
-                                    /*for (sample in it.data.samples) {
-                                        Log.d(TAG, "ACC data: time: ${sample.timeStamp} X: ${sample.x} Y: ${sample.y} Z: ${sample.z}")
-                                    }*/
-                                }
-//                      is PolarOfflineRecordingData.GyroOfflineRecording -> { }
-//                      is PolarOfflineRecordingData.MagOfflineRecording -> { }
-//                      ...
-                                else -> {
-                                    Log.d(TAG, "Recording type is not yet implemented")
-                                }
-                            }
-                        },
-                        { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
-                    )
-            } catch (e: Exception) {
-                Log.e(TAG, "Get offline recording fetch failed on entry ...", e)
-            }
-        }
-    }
-
-    fun getTrainingStatus() {
-        viewModelScope.launch {
-            val existingAppData = dao.verifyDataExistence().firstOrNull()
-
-            _isTrainingRunning.value = existingAppData?.first()?.runningTraining ?: false
-
-        }
-    }
 
     fun disposeAllStreams() {
         accDisposable?.dispose()
@@ -733,5 +570,4 @@ class TrainingViewModel @Inject constructor(
             }
         }
     }
-
 }

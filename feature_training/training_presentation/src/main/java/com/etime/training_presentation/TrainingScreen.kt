@@ -31,6 +31,7 @@ import com.etime.core_ui.LocalSpacing
 import com.etime.core_ui.components.TTBattery
 import com.etime.core_ui.components.TTButton
 import com.etime.core_ui.components.TTCircleIcon
+import com.etime.training_presentation.data.AppData
 import com.etime.training_presentation.data.Profile
 import com.etime.training_presentation.profile.ProfileViewModel
 import kotlin.time.ExperimentalTime
@@ -41,12 +42,14 @@ fun TrainingScreen(
     trainingViewModel: TrainingViewModel = hiltViewModel(),
     profileViewModel: ProfileViewModel = hiltViewModel(),
     onHistorialNavigation: () -> Unit,
-    onNextClick: () -> Unit,
+    onStartTraining: () -> Unit,
+    onStopTraining: () -> Unit,
     onRequestConnectionClick: () -> Unit,
     onProfileClick: () -> Unit
 ){
 
     val isConnected = trainingViewModel.isConnected.collectAsState()
+    val isTrainingRunning = trainingViewModel.isTrainingRunning.collectAsState()
     val deviceId = profileViewModel.deviceId.collectAsState()
 
     LaunchedEffect(key1 = true) {
@@ -80,8 +83,18 @@ fun TrainingScreen(
 
         SelectionSectionContainer(
             isConnected,
+            isTrainingRunning,
             onRequestConnectionClick,
-            onNextClick,
+            onStartTraining = {
+                trainingViewModel.changeTrainingStatus(
+                    AppData(runningTraining = true)
+                )
+            },
+            onStopTraining = {
+                trainingViewModel.changeTrainingStatus(
+                    AppData(runningTraining = false)
+                )
+            },
             onHistorialNavigation,
             onProfileClick
         )
@@ -131,8 +144,10 @@ fun lastConnectedDevice(
 @Composable
 private fun SelectionSectionContainer(
     isConnected: State<Boolean>,
+    isTrainingRunning: State<Boolean>,
     onRequestConnectionClick: () -> Unit,
-    onNextClick: () -> Unit,
+    onStartTraining: () -> Unit,
+    onStopTraining: () -> Unit,
     onHistorialNavigation: () -> Unit,
     onProfileClick: () -> Unit
 ) {
@@ -155,12 +170,29 @@ private fun SelectionSectionContainer(
                 }
             }
 
-            TTButton(
+            if(isTrainingRunning.value.not()) {
+                TTButton(
+                    text = "Start Training",
+                    isEnabled = isConnected.value
+                ) {
+                    onStartTraining()
+                }
+            } else {
+                TTButton(
+                    text = "Stop Training",
+                    isEnabled = isConnected.value
+                ) {
+                    onStopTraining()
+                }
+            }
+
+
+            /*TTButton(
                 text = "Start Training",
                 isEnabled = isConnected.value
             ) {
                 onNextClick()
-            }
+            }*/
 
             Text(
                 text = "View historial",

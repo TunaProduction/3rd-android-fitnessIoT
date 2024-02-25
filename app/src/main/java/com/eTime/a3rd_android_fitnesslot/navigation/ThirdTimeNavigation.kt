@@ -47,9 +47,10 @@ fun ThirdTimeNavigation() {
                 onHistorialNavigation = {
                     navController.navigate(Route.HISTORIAL_TRAINING)
                 },
-                onNextClick = {
+                onStartTraining = {
                     navController.navigate(Route.TRACK_TRAINING)
                 },
+                onStopTraining = {},
                 onRequestConnectionClick = {
                     navController.navigate(Route.CONNECT_DEVICE)
                 },
