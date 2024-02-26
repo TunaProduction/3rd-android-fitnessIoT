@@ -101,11 +101,17 @@ class TrainingViewModel @Inject constructor(
     private val _hrData = MutableStateFlow<PolarHrData.PolarHrSample?>(null)
     val hrData = _hrData.asStateFlow()
 
+    private val _hrAvgData = MutableStateFlow<Double>(0.000000)
+    val hrAvgData = _hrAvgData.asStateFlow()
+
     private val _accData = MutableStateFlow<PolarAccelerometerData.PolarAccelerometerDataSample?>(null)
     val accData = _accData.asStateFlow()
 
     private val _acceleration = MutableStateFlow<Double>(0.000000)
     val acceleration = _acceleration.asStateFlow()
+
+    private val _accelerationAvg = MutableStateFlow<Double>(0.000000)
+    val accelerationAvg = _accelerationAvg.asStateFlow()
 
     private val _distance = MutableStateFlow<Double>(0.000000)
     val distance = _distance.asStateFlow()
@@ -262,8 +268,9 @@ class TrainingViewModel @Inject constructor(
         _onGoing.value = false
         heartTrackData = _heartTrack.value
         accelerationTrackData = _accelerationTrack.value
-        changeTrainingStatus(TrainingStatus.Finished)
+        //changeTrainingStatus(TrainingStatus.Finished)
         createTrainingFile(context)
+        deleteTrainings()
     }
 
     fun formatSeconds(seconds: Int): String {
@@ -484,6 +491,9 @@ class TrainingViewModel @Inject constructor(
         val avgHr = heartTrackData.map { it.hr }.average()
         val avgAcceleration = accelerationTrackData.average()
 
+        _hrAvgData.value = avgHr
+        _accelerationAvg.value = avgAcceleration
+
         _loading.value = true
         viewModelScope.launch(job) {
             dao.getProfile().collectLatest {
@@ -588,7 +598,17 @@ class TrainingViewModel @Inject constructor(
             //Without a secret key
             //api.startOfflineRecording(deviceId, PolarBleApi.PolarDeviceDataType.ACC, PolarSensorSetting(settings.toMap()))
             .subscribe(
-                { Log.d(TAG, "start offline recording completed") },
+                { Log.d(TAG, "start ACC offline recording completed") },
+                { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
+            )
+
+        api.startOfflineRecording(_connectedDeviceId.value, PolarBleApi.PolarDeviceDataType.HR, PolarSensorSetting
+            (settings.toMap()),
+            yourSecret)
+            //Without a secret key
+            //api.startOfflineRecording(deviceId, PolarBleApi.PolarDeviceDataType.ACC, PolarSensorSetting(settings.toMap()))
+            .subscribe(
+                { Log.d(TAG, "start HR offline recording completed") },
                 { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
             )
     }
@@ -598,8 +618,16 @@ class TrainingViewModel @Inject constructor(
         api.stopOfflineRecording(_connectedDeviceId.value, PolarBleApi.PolarDeviceDataType.ACC)
             .subscribe(
                 {
+                    Log.d(TAG, "stop ACC offline recording completed")
+                },
+                { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
+            )
+
+        api.stopOfflineRecording(_connectedDeviceId.value, PolarBleApi.PolarDeviceDataType.HR)
+            .subscribe(
+                {
                     listTraining()
-                    Log.d(TAG, "stop offline recording completed")
+                    Log.d(TAG, "stop HR offline recording completed")
                 },
                 { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
             )
@@ -634,8 +662,10 @@ class TrainingViewModel @Inject constructor(
         //NOTE: For this example you need to click on listRecordingsButton to have files entry (entryCache) up to date
         Log.d(TAG, "Searching to recording to download... ")
         //Get first entry for testing download
-        val offlineRecEntry = entryCache[_connectedDeviceId.value]?.firstOrNull()
-        offlineRecEntry?.let { offlineEntry ->
+        val offlineRecEntries = entryCache[_connectedDeviceId.value]
+        val ecgCreatedData = mutableListOf<FloatEntry>()
+
+        offlineRecEntries?.forEach { offlineEntry ->
             try {
                 //Using a secret key managed by your own.
                 //  You can use a different key to each start recording calls.
@@ -677,6 +707,18 @@ class TrainingViewModel @Inject constructor(
                                     /*for (sample in it.data.samples) {
                                         Log.d(TAG, "ACC data: time: ${sample.timeStamp} X: ${sample.x} Y: ${sample.y} Z: ${sample.z}")
                                     }*/
+                                }
+
+                                is PolarOfflineRecordingData.HrOfflineRecording -> {
+                                    var hrOfflineData = it.data
+                                    for (sample in hrOfflineData.samples) {
+                                        _hrData.value = sample
+                                        _heartTrack.value.add(sample)
+                                        ecgCreatedData.add(entryOf(totalSeconds.toFloat(), sample.hr))
+                                        _hrChartEntry.tryEmit(ecgCreatedData)
+                                        //Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
+
+                                    }
                                 }
 //                      is PolarOfflineRecordingData.GyroOfflineRecording -> { }
 //                      is PolarOfflineRecordingData.MagOfflineRecording -> { }
@@ -754,6 +796,8 @@ class TrainingViewModel @Inject constructor(
         _completeTraining.value = false
         _loading.value = false
         totalSeconds = 0
+        _accelerationAvg.value = 0.000000
+        _hrAvgData.value = 0.000000
     }
 
 
@@ -764,14 +808,14 @@ class TrainingViewModel @Inject constructor(
             val sendTraining = network.sendTraining(query)
             Result.success(sendTraining).also {
                 _loading.value = false
-                _completeTraining.value = true
+               // _completeTraining.value = true
             }
 
         } catch(e: Exception) {
             e.printStackTrace()
             Result.failure<String>(e).also {
                 _loading.value = false
-                _completeTraining.value = false
+                //_completeTraining.value = false
             }
         }
     }

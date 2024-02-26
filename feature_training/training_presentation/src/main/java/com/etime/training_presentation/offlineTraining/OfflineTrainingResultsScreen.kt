@@ -83,6 +83,7 @@ fun OfflineTrainingResultsScreen(
         backNavigation()
         return
     }
+    trainingViewModel.finishTraining(context)
 
     val trainingStatus = trainingViewModel.trainingStatus.collectAsState()
     val hrChartData = trainingViewModel.hrChartEntry.collectAsState()
@@ -182,6 +183,8 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
 
     //val deviceId = trainingViewModel.connectedDeviceId.collectAsState()
     val hrData = trainingViewModel.hrData.collectAsState()
+    val avgHr = trainingViewModel.hrAvgData.collectAsState()
+    val avgAcc = trainingViewModel.accelerationAvg.collectAsState()
     val acceleration = trainingViewModel.acceleration.collectAsState()
     val falls = trainingViewModel.falls.collectAsState()
     val distance = trainingViewModel.distance.collectAsState()
@@ -196,10 +199,6 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
     //val maxHeartRate = (220 - (currentProfile.value?.age?.toInt() ?: 0));
     //val reserveHeartRate = maxHeartRate - restingHeartRateRecord;
 
-    LaunchedEffect(key1 = true) {
-        trainingViewModel.deleteTrainings()
-    }
-
     LazyVerticalGrid(
         modifier = Modifier
             .fillMaxWidth(),
@@ -211,11 +210,11 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
         content = {
 
 
-            hrData.value?.let{
+            avgHr.value?.let{
                 item {
                     TTTrainingCell(
                         name = stringResource(id = R.string.training_heart_rate_label),
-                        value = it.hr.toString(),
+                        value = it.toString(),
                     )
                 }
             }
@@ -287,7 +286,7 @@ fun TrackTrainingContent(trainingViewModel: TrainingViewModel) {
                  }
              }*/
 
-            acceleration.value?.let {
+            avgAcc.value?.let {
                 item {
                     TTTrainingCell(
                         name = stringResource(id = R.string.training_acceleration_label),

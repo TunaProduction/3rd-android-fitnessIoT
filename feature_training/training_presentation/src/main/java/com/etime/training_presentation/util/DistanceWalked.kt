@@ -35,12 +35,12 @@ fun getWalkedDistance(samples: List<PolarAccelerometerData.PolarAccelerometerDat
         estimate = estimate + kalmanGain * (aNet - estimate)
         estimateError = (1 - kalmanGain) * estimateError
 
-        Log.d("DEBUG", "aNet: $aNet, estimate: $estimate, prevEstimate: $prevEstimate, kalmanGain: $kalmanGain")
+       // Log.d("DEBUG", "aNet: $aNet, estimate: $estimate, prevEstimate: $prevEstimate, kalmanGain: $kalmanGain")
 
         // Step detection: Check if the absolute difference crosses the sensitivity threshold
         if (abs(prevEstimate - estimate) > sensitivityThreshold) {
             stepCount++
-            Log.d("DEBUG", "Step detected. Total steps: $stepCount")
+            //Log.d("DEBUG", "Step detected. Total steps: $stepCount")
         }
     }
 
