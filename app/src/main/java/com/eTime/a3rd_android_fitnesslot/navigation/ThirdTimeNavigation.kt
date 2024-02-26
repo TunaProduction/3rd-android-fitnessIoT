@@ -11,6 +11,7 @@ import com.etime.training_presentation.ConnectDeviceScreen
 import com.etime.training_presentation.trackTraining.TrackTrainingScreen
 import com.etime.training_presentation.TrainingScreen
 import com.etime.training_presentation.TrainingViewModel
+import com.etime.training_presentation.offlineTraining.OfflineTrainingResultsScreen
 import com.etime.training_presentation.profile.ProfileScreen
 import com.etime.training_presentation.trainingHistorial.TrainingHistorialScreen
 import kotlin.time.ExperimentalTime
@@ -50,7 +51,9 @@ fun ThirdTimeNavigation() {
                 onStartTraining = {
                     navController.navigate(Route.TRACK_TRAINING)
                 },
-                onStopTraining = {},
+                onStopTraining = {
+                    navController.navigate(Route.OFFLINE_TRAINING_RESULTS)
+                },
                 onRequestConnectionClick = {
                     navController.navigate(Route.CONNECT_DEVICE)
                 },
@@ -71,6 +74,16 @@ fun ThirdTimeNavigation() {
 
         composable(Route.TRACK_TRAINING){
             TrackTrainingScreen(
+                trainingViewModel = trainingViewModel,
+                trigger = true,
+                backNavigation = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Route.OFFLINE_TRAINING_RESULTS){
+            OfflineTrainingResultsScreen(
                 trainingViewModel = trainingViewModel,
                 trigger = true,
                 backNavigation = {

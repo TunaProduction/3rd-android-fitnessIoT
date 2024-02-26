@@ -559,6 +559,7 @@ class TrainingViewModel @Inject constructor(
 
     fun startOrStopRecording (isRunning: Boolean) {
         if(isRunning) {
+            getProfile()
             startRecordingTraining()
         } else {
             stopRecording()
@@ -591,8 +592,6 @@ class TrainingViewModel @Inject constructor(
                 { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
             )
     }
-
-
 
     fun stopRecording() {
         Log.d(TAG, "Stops ACC recording")
@@ -656,6 +655,25 @@ class TrainingViewModel @Inject constructor(
                             when (it) {
                                 is PolarOfflineRecordingData.AccOfflineRecording -> {
                                     Log.d(TAG, "ACC Recording started at ${it.startTime}")
+
+                                    var polarAccelerometerData = it.data
+                                    _acceleration.value = getDeltaLinearAcceleration(
+                                        it.data.samples,
+                                        0.000000
+                                    ).first
+
+                                    _accelerationTrack.value.add(_acceleration.value)
+
+                                    val walk = getWalkedDistance(polarAccelerometerData.samples)
+                                    _distance.value = walk.first
+                                    _steps.value = walk.second
+
+                                    _isMoving.value = isHeavyMovement(polarAccelerometerData)
+
+                                    profile.value?.let {
+                                        if (detectFall(polarAccelerometerData, it.height.toInt()))
+                                            _falls.value++
+                                    }
                                     /*for (sample in it.data.samples) {
                                         Log.d(TAG, "ACC data: time: ${sample.timeStamp} X: ${sample.x} Y: ${sample.y} Z: ${sample.z}")
                                     }*/
@@ -672,6 +690,30 @@ class TrainingViewModel @Inject constructor(
                     )
             } catch (e: Exception) {
                 Log.e(TAG, "Get offline recording fetch failed on entry ...", e)
+            }
+        }
+    }
+
+    fun deleteTrainings() {
+        val offlineRecEntries = entryCache[_connectedDeviceId.value]
+
+        offlineRecEntries?.forEach { entry ->
+            try {
+                api.removeOfflineRecord(_connectedDeviceId.value, entry)
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                        {
+                            Log.d(TAG, "Recording file deleted")
+                        },
+                        { error ->
+                            val errorString = "Recording file deletion failed: $error"
+                            //showToast(errorString)
+                            Log.e(TAG, errorString)
+                        }
+                    )
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Delete offline recording failed on entry ...", e)
             }
         }
     }

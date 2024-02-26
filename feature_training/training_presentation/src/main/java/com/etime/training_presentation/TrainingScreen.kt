@@ -94,6 +94,9 @@ fun TrainingScreen(
                 trainingViewModel.changeTrainingStatus(
                     AppData(runningTraining = false)
                 )
+
+                onStopTraining.invoke()
+
             },
             onHistorialNavigation,
             onProfileClick
