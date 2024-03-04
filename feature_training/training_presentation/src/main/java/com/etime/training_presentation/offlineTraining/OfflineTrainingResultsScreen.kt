@@ -83,7 +83,6 @@ fun OfflineTrainingResultsScreen(
         backNavigation()
         return
     }
-    trainingViewModel.finishTraining(context)
 
     val trainingStatus = trainingViewModel.trainingStatus.collectAsState()
     val hrChartData = trainingViewModel.hrChartEntry.collectAsState()
@@ -91,6 +90,13 @@ fun OfflineTrainingResultsScreen(
     val loading = trainingViewModel.loading.collectAsState()
     val battery = trainingViewModel.connectedDeviceBattery.collectAsState()
     chartEntryModelProducer.setEntries(hrChartData.value)
+
+    if(trainingStatus.value == TrainingStatus.Reviewing) {
+        LaunchedEffect(true) {
+            trainingViewModel.createTrainingFile(context)
+        }
+    }
+
     
     Column (
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -113,6 +119,10 @@ fun OfflineTrainingResultsScreen(
             startAxis = rememberStartAxis(),
             bottomAxis = rememberBottomAxis(),
         )
+
+        TTButton(text = "Finish") {
+          trainingViewModel.finishOfflineTraining()
+        }
     }
 
     if(loading.value) {
@@ -156,6 +166,7 @@ fun TrackTrainingControl(
                 pauseStopString = R.string.training_stop_button
             }
             TrainingStatus.Finished -> {}
+            TrainingStatus.Reviewing -> {}
         }
 
         if(startContinueVisibility) {

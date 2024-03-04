@@ -273,6 +273,19 @@ class TrainingViewModel @Inject constructor(
         deleteTrainings()
     }
 
+    fun preFinishTraining() {
+        _onGoing.value = false
+        heartTrackData = _heartTrack.value
+        accelerationTrackData = _accelerationTrack.value
+        changeTrainingStatus(TrainingStatus.Reviewing)
+    }
+
+    fun finishOfflineTraining() {
+        changeTrainingStatus(TrainingStatus.Finished)
+        deleteTrainings()
+        _completeTraining.value = true
+    }
+
     fun formatSeconds(seconds: Int): String {
         val hours = seconds / 3600
         val minutes = (seconds % 3600) / 60
@@ -487,7 +500,7 @@ class TrainingViewModel @Inject constructor(
         })
     }
 
-    private fun createTrainingFile(context: Context) {
+    fun createTrainingFile(context: Context) {
         val avgHr = heartTrackData.map { it.hr }.average()
         val avgAcceleration = accelerationTrackData.average()
 
@@ -646,14 +659,17 @@ class TrainingViewModel @Inject constructor(
             .subscribe(
                 { polarOfflineRecordingEntry: PolarOfflineRecordingEntry ->
 
-                    downloadTraining()
+
                     Log.d(
                         TAG,
                         "next: ${polarOfflineRecordingEntry.date} path: ${polarOfflineRecordingEntry.path} size: ${polarOfflineRecordingEntry.size}"
                     )
                 },
                 { error: Throwable -> Log.e(TAG, "Failed to list recordings: $error") },
-                { Log.d(TAG, "list recordings complete") }
+                {
+                    Log.d(TAG, "list recordings complete")
+                    downloadTraining()
+                }
             )
     }
 
@@ -727,8 +743,18 @@ class TrainingViewModel @Inject constructor(
                                     Log.d(TAG, "Recording type is not yet implemented")
                                 }
                             }
+
+                            if(offlineEntry == offlineRecEntries.last()) {
+                                preFinishTraining()
+                            }
                         },
-                        { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
+                        { throwable: Throwable ->
+                            if(offlineEntry == offlineRecEntries.last()) {
+                                preFinishTraining()
+                            }
+                            Log.e(TAG, "" + throwable.toString())
+
+                        },
                     )
             } catch (e: Exception) {
                 Log.e(TAG, "Get offline recording fetch failed on entry ...", e)

@@ -176,6 +176,7 @@ fun TrackTrainingControl(
                 pauseStopString = R.string.training_stop_button
             }
             TrainingStatus.Finished -> {}
+            TrainingStatus.Reviewing -> {}
         }
 
         if(startContinueVisibility) {
