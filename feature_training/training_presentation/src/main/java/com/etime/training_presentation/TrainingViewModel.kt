@@ -727,13 +727,28 @@ class TrainingViewModel @Inject constructor(
 
                                 is PolarOfflineRecordingData.HrOfflineRecording -> {
                                     var hrOfflineData = it.data
+                                    var separator = 0
                                     for (sample in hrOfflineData.samples) {
                                         _hrData.value = sample
                                         _heartTrack.value.add(sample)
-                                        ecgCreatedData.add(entryOf(totalSeconds.toFloat(), sample.hr))
-                                        _hrChartEntry.tryEmit(ecgCreatedData)
-                                        //Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
 
+                                        if(separator == 3) {
+                                            totalSeconds += 3
+                                            _hrData.value?.let {
+                                                timeWithHeartRate.add(
+                                                    TimeWithHeartRate(
+                                                        time = formatSeconds(totalSeconds), // Your logic for getting the timestamp here
+                                                        hr = it.hr.toString()
+                                                    )
+                                                )
+                                            }
+                                            ecgCreatedData.add(entryOf(totalSeconds.toFloat(), sample.hr))
+                                            _hrChartEntry.tryEmit(ecgCreatedData)
+                                            separator = 0
+                                        }
+
+                                        Log.d(TAG, "HR     bpm: ${sample.hr} rrs: ${sample.rrsMs} rrAvailable: ${sample.rrAvailable} contactStatus: ${sample.contactStatus} contactStatusSupported: ${sample.contactStatusSupported}")
+                                        separator++
                                     }
                                 }
 //                      is PolarOfflineRecordingData.GyroOfflineRecording -> { }
