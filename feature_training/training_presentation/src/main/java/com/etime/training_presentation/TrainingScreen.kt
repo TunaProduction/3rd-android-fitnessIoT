@@ -78,6 +78,7 @@ fun TrainingScreen(
                 batteryLevel = batteryLevel.value
             ) {
                 trainingViewModel.connectDeviceByString(deviceId.value)
+                trainingViewModel.getTrainingStatus()
             }
         }
 
