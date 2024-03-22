@@ -507,7 +507,7 @@ class TrainingViewModel @Inject constructor(
         _hrAvgData.value = avgHr
         _accelerationAvg.value = avgAcceleration
 
-        _loading.value = true
+        //_loading.value = true
         viewModelScope.launch(job) {
             dao.getProfile().collectLatest {
                 val training = FinishedTrainingData(
@@ -606,8 +606,7 @@ class TrainingViewModel @Inject constructor(
             )
         )
         api.startOfflineRecording(_connectedDeviceId.value, PolarBleApi.PolarDeviceDataType.ACC, PolarSensorSetting
-            (settings.toMap()),
-            yourSecret)
+            (settings.toMap()))
             //Without a secret key
             //api.startOfflineRecording(deviceId, PolarBleApi.PolarDeviceDataType.ACC, PolarSensorSetting(settings.toMap()))
             .subscribe(
@@ -615,9 +614,7 @@ class TrainingViewModel @Inject constructor(
                 { throwable: Throwable -> Log.e(TAG, "" + throwable.toString()) }
             )
 
-        api.startOfflineRecording(_connectedDeviceId.value, PolarBleApi.PolarDeviceDataType.HR, PolarSensorSetting
-            (settings.toMap()),
-            yourSecret)
+        api.startOfflineRecording(_connectedDeviceId.value, PolarBleApi.PolarDeviceDataType.HR)
             //Without a secret key
             //api.startOfflineRecording(deviceId, PolarBleApi.PolarDeviceDataType.ACC, PolarSensorSetting(settings.toMap()))
             .subscribe(
@@ -627,7 +624,8 @@ class TrainingViewModel @Inject constructor(
     }
 
     fun stopRecording() {
-        Log.d(TAG, "Stops ACC recording")
+        Log.d(TAG, "Stops ACC AND HR recording")
+        _loading.value = true
         api.stopOfflineRecording(_connectedDeviceId.value, PolarBleApi.PolarDeviceDataType.ACC)
             .subscribe(
                 {
@@ -692,7 +690,7 @@ class TrainingViewModel @Inject constructor(
                         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
                     )
                 )
-                api.getOfflineRecord(_connectedDeviceId.value, offlineEntry, yourSecret)
+                api.getOfflineRecord(_connectedDeviceId.value, offlineEntry)
                     //Not using a secret key
                     //api.getOfflineRecord(deviceId, offlineEntry)
                     .subscribe(
